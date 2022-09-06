@@ -21,22 +21,20 @@ LED_STRIP = ws.WS2811_STRIP_GRB
 LED_CHANNEL = 0
 START_ON = True
 
-# Since light strip is GRB, we need to reverse the order of Green and Red
-def RGB(r, g, b):
-    return Color(g, r, b)
-
 strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL, LED_STRIP)
 strip.begin()
 
+def setAll(color):
+    for i in range(strip.numPixels()):
+        strip.setPixelColor(i, color)
+    strip.show()
+
+from Colors import TestColors as TestColor
 # Test animation for lights
 def rainbow_test():
     while (True):
-        jsonFile = open('TestColors.json')
-        data = json.load(jsonFile)
-        for i in data['colors']:
-            for j in range(strip.numPixels()):
-                strip.setPixelColor(j, RGB(i['r'], i['g'], i['b']))
-            strip.show()
+        for testcolor in TestColor:
+            setAll(testcolor.value)
             time.sleep(1)
 
 rainbow_test()
