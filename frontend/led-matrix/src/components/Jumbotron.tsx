@@ -15,8 +15,8 @@ export default function Jumbotron() {
   console.log(jumbotron);
 
   useEffect(() => {
-    let rowSize = jumbotron.rows;
-    let colSize = jumbotron.columns;
+    let rowSize = Number(jumbotron.rows);
+    let colSize = Number(jumbotron.columns);
 
     let jumbotronArr = [];
     for (let row = 0; row < rowSize; row++) {
@@ -30,17 +30,15 @@ export default function Jumbotron() {
   }, [jumbotron]);
   //Huge Commit
   return (
-    <>
-      <h2>Jumbotron</h2>
-      <div className="grid grid-cols-64 gap-1">
-        {pixels?.map((pixelArr, index) => (
-          <div key={index}>
-            {pixelArr.map((pixel, i) => (
-              <Pixel key={i} pixel={pixel} />
-            ))}
-          </div>
-        ))}
+    <div className="mt-12">
+      <h2 className="mb-2 text-lg">Live View: Jumbotron</h2>
+      <div className="grid grid-cols-64 gap-1 border-2 border-red-500 p-4">
+        {pixels?.map((pixelArr, rowIndex) => 
+          pixelArr.map((pixel, colIndex) => (
+            <Pixel key={`${rowIndex}-${colIndex}`} pixel={pixel} />
+          ))
+        )}
       </div>
-    </>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 import IPixel from "../interfaces/Pixel";
 
-const PIXELSIZE = "1vh";
+const PIXELSIZE = "1.2vh";
 
 const Pixel = ({ pixel }: { pixel: IPixel }) => {
   return (
