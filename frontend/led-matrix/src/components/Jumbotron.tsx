@@ -28,7 +28,7 @@ export default function Jumbotron() {
     }
     setPixels(jumbotronArr);
   }, [jumbotron]);
-
+  //Huge Commit
   return (
     <>
       <h2>Jumbotron</h2>
