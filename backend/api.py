@@ -1,12 +1,21 @@
 from flask import Flask
+from flask_cors import CORS
+
+ROWS = 48
+COLUMNS = 64
 
 app = Flask(__name__)
+CORS(app)
 
-@app.route('/')
-def hello_world():
-    return 'Hello, World!'
+@app.route('/jumbotron')
+def discover():
+    return {
+        "isAlive": True,
+        "rows": ROWS,
+        "columns": COLUMNS,
+    }
 
-@app.route('/api/helloworld')
+@app.route('/jumbotron')
 def greet():
     return {"message": "Hello, API World!"}
 

@@ -1,22 +1,28 @@
 ## Installation
 
+## NOTE: If you are on Windows, you will need to install WSL2 and Ubuntu 20.04 LTS to run this project. You can follow the instructions here: https://docs.microsoft.com/en-us/windows/wsl/install-win10
+You can probably do it in Windows, but all I've gotten are so many errors!
+
+## Ok, here's how to install this project:
+
 ### Change directory
 ```cd backend```
 
 ### Create a virtual environment
 ```python3 -m venv venv```
+Note: If this command fails saying that the Python virtual environment module is not installed, you can install it by running ```sudo apt install python3-venv``` on Ubuntu.
 
 ### Activate the virtual environment
 ```source venv/bin/activate```
 
 ### Install Flask
-```pip install Flask```
+```pip3 install Flask```
 
 ### Exit from Python virtual environment
 ```deactivate```
 
 ### Change directory
-```cd .. && cd frontend```
+```cd .. && cd frontend/led-matrix```
 
 ### Install dependencies
 ```npm install``` (if you get `permission denied`, try `sudo npm install` if on mac or linux)
