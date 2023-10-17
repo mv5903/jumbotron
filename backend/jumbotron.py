@@ -17,6 +17,14 @@ class Jumbotron:
         self._columns = columns
         self._pixels = [[Pixel() for _ in range(self._columns)] for _ in range(self._rows)]
 
+    def get2DArrayRepresentation(self):
+        return [[{
+                'r': self._pixels[row][column]._r,
+                'g': self._pixels[row][column]._g,
+                'b': self._pixels[row][column]._b,
+                'brightness': self._pixels[row][column]._brightness
+            } for column in range(self._columns)] for row in range(self._rows)]
+
     def updatePixel(self, row, column, r, g, b, brightness):
         self._pixels[row][column].updatePixel(r, g, b, brightness)
 

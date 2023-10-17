@@ -6,6 +6,7 @@ import io from 'socket.io-client';
 
 export default function Jumbotron() {
   const [pixels, setPixels] = useState<IPixel[][]>();
+  const [latency, setLatency] = useState<string>("");
 
   const jumbotronContext = useContext(JumbotronContext);
   if (!jumbotronContext) {
@@ -13,7 +14,6 @@ export default function Jumbotron() {
   }
 
   const { jumbotron, setJumbotron } = jumbotronContext;
-  console.log(jumbotron);
 
   useEffect(() => {
     let rowSize = Number(jumbotron.rows);
@@ -35,18 +35,22 @@ export default function Jumbotron() {
       const socket = io(`http://${jumbotron.ip}:5000/jumbotron`);
 
       // Register an event listener for the 'array_update' event
-      socket.on('array_update', (update) => {
-        console.log(update);
+      socket.on('array_update', (response: { data: IPixel[][], timestamp: number }) => {
+        setLatency((Date.now() - (response.timestamp / 1000000)).toFixed(2));
+        setPixels(response.data);
       });
 
       // Clean up the effect by disconnecting the socket when the component is unmounted
-      return () => socket.disconnect();
+      return () => {
+        socket.disconnect();
+      }
   }, []);  // The empty dependency array means this effect will only run once, similar to componentDidMount
 
   //Huge Commit
   return (
     <div className="mt-12">
       <h2 className="mb-2 text-lg">Live View: Jumbotron</h2>
+      <p>(Latency: <span>{latency}</span>ms)</p>
       <div className="grid grid-cols-64 gap-1 border-2 border-red-500 p-4">
         {pixels?.map((pixelArr, rowIndex) => 
           pixelArr.map((pixel, colIndex) => (

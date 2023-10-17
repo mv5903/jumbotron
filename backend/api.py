@@ -20,7 +20,7 @@ thread_stop_event = Event()
 
 def jumbotron_updater():
     while not thread_stop_event.isSet():
-        socketio.emit('array_update', {'data': MATRIX}, namespace='/jumbotron')
+        socketio.emit('array_update', {'data': MATRIX.get2DArrayRepresentation(), 'timestamp' : time.time_ns() }, namespace='/jumbotron')
         time.sleep(1/60.0)  # approximately 60 times per second
 
 @socketio.on('connect', namespace='/jumbotron')
@@ -39,9 +39,6 @@ def discover():
         "rows": ROWS,
         "columns": COLUMNS,
     }
-
-
-
 
 if __name__ == '__main__':
     # Create empty matrix of pixels
