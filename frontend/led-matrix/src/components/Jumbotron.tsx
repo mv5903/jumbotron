@@ -2,6 +2,7 @@ import { useContext, useEffect, useState } from "react";
 import JumbotronContext from "../providers/JumbotronContext";
 import Pixel from "./Pixel";
 import IPixel from "../interfaces/Pixel";
+import io from 'socket.io-client';  
 
 export default function Jumbotron() {
   const [pixels, setPixels] = useState<IPixel[][]>();
@@ -28,6 +29,20 @@ export default function Jumbotron() {
     }
     setPixels(jumbotronArr);
   }, [jumbotron]);
+
+  useEffect(() => {
+      // Connect to the server
+      const socket = io(`http://${jumbotron.ip}:5000/jumbotron`);
+
+      // Register an event listener for the 'array_update' event
+      socket.on('array_update', (update) => {
+        console.log(update);
+      });
+
+      // Clean up the effect by disconnecting the socket when the component is unmounted
+      return () => socket.disconnect();
+  }, []);  // The empty dependency array means this effect will only run once, similar to componentDidMount
+
   //Huge Commit
   return (
     <div className="mt-12">
