@@ -117,5 +117,5 @@ if __name__ == '__main__':
     MATRIX = Jumbotron(ROWS, COLUMNS, PIN)
     logger.info("Matrix created successfully")
     logger.info("Starting Jumbotron API")
-    socketio.run(app, host='127.0.0.1', port=5000)
+    socketio.run(app, host='0.0.0.0', port=5000)
     logger.info("Jumbotron API started successfully")
