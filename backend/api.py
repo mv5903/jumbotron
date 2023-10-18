@@ -34,6 +34,7 @@ logger.addHandler(stream_handler)
 eventlet.monkey_patch()
 
 PIN = 18
+
 ROWS = 48
 COLUMNS = 64
 
