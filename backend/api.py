@@ -5,10 +5,12 @@ from threading import Event
 import time
 import eventlet
 import logging
+import sys
 from logging.handlers import TimedRotatingFileHandler
 
 from jumbotron import Jumbotron
 
+# Log format
 log_format = "%(asctime)s - %(levelname)s - %(message)s"
 
 # Create a logger
@@ -19,8 +21,16 @@ logger.setLevel(logging.INFO)
 handler = TimedRotatingFileHandler("jumbotron.log", when="midnight", interval=1, backupCount=7)
 handler.setFormatter(logging.Formatter(log_format))
 
-# Add the handler to the logger
+# Add the file handler to the logger
 logger.addHandler(handler)
+
+# Create a stream handler to print log messages to stdout
+stream_handler = logging.StreamHandler(sys.stdout)
+stream_handler.setFormatter(logging.Formatter(log_format))
+
+# Add the stream handler to the logger
+logger.addHandler(stream_handler)
+
 eventlet.monkey_patch()
 
 PIN = 18
