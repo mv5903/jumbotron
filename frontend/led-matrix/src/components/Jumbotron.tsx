@@ -1,13 +1,13 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import JumbotronContext from "../providers/JumbotronContext";
 import Pixel from "./Pixel";
 import IPixel from "../interfaces/Pixel";
-import io from 'socket.io-client';  
-import { FaInfoCircle } from "react-icons/fa";
+import io from 'socket.io-client';
 
 export default function Jumbotron() {
   const [pixels, setPixels] = useState<IPixel[][]>();
   const [latency, setLatency] = useState<string>("");
+  const [pollingRate, setPollingRate] = useState<number>(0); 
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [tryAgain, setTryAgain] = useState<boolean>(false);
 
@@ -17,6 +17,8 @@ export default function Jumbotron() {
   }
 
   const { jumbotron, setJumbotron } = jumbotronContext;
+
+  const tempCounter = useRef<number>(0);
 
   useEffect(() => {
     let rowSize = Number(jumbotron.rows);
@@ -37,12 +39,18 @@ export default function Jumbotron() {
     // Connect to the server
     const socket = io(`http://${jumbotron.ip}:5000/jumbotron`);
 
+    const intervalId = setInterval(() => {
+      setPollingRate(tempCounter.current);
+      tempCounter.current = 0;
+    }, 1000);
+
     // Register an event listener for the 'array_update' event
     socket.on('array_update', (response: { data: IPixel[][], timestamp: number }) => {
       setIsConnected(true);
       let latency = (Date.now() - (response.timestamp / 1000000));
       setLatency(latency.toFixed(0));
       setPixels(response.data);
+      tempCounter.current++;
     });
 
     // Handle disconnection
@@ -65,6 +73,7 @@ export default function Jumbotron() {
     // Clean up the effect by disconnecting the socket when the component is unmounted
     return () => {
       socket.disconnect();
+      clearInterval(intervalId);
     }
   }, [tryAgain]);  // The empty dependency array means this effect will only run once, similar to componentDidMount
 
@@ -84,10 +93,9 @@ export default function Jumbotron() {
           </div>
           :
           <>
-            <div className="mb-4">
-              <h2 className="mb-2 text-lg">Live View: Jumbotron</h2>
-              <div className="stat-title">Latency</div>
-              <div className="stat-desc">{latency}ms</div>
+            <div className="absolute right-4 mb-4 flex-col items-start">
+              <div className="stat-desc">Ping: {latency}ms</div>
+              <div className="stat-desc">Rate: {pollingRate} updates/sec</div>
             </div>
             <div className="grid grid-cols-64 gap-1 border-2 border-red-500 p-4">
               {pixels?.map((pixelArr, rowIndex) => 
