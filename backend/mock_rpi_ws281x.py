@@ -2,6 +2,7 @@
 
 class PixelStrip:
     def __init__(self, *args, **kwargs):
+        print('Warning: Using mock_rpi_ws281x. This library won\'t actually control any LEDs. If this is running on a Raspberry Pi 4, please install rpi_ws281x.')
         pass
 
     def begin(self):
