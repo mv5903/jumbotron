@@ -1,10 +1,13 @@
 from flask import Flask, make_response
 from flask_cors import CORS
 from flask_socketio import SocketIO
-from threading import Thread, Event
+from threading import Event
 import time
 
 from jumbotron import Jumbotron
+
+import eventlet
+eventlet.monkey_patch()
 
 PIN=18
 
@@ -17,23 +20,25 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
-thread = Thread()
+
+thread_started = False
 thread_stop_event = Event()
 
 def jumbotron_updater():
-    while not thread_stop_event.isSet():
+    while not thread_stop_event.is_set():
         if (MATRIX is not None):
             socketio.emit('array_update', {'data': MATRIX.get2DArrayRepresentation(), 'timestamp' : time.time_ns() }, namespace='/jumbotron')
             time.sleep(1/60.0)  # approximately 60 times per second
 
 @socketio.on('connect', namespace='/jumbotron')
-def handle_connect():
-    global thread
+def handle_connect(*args):
+    global thread_started
     print('Client connected')
 
-    # Start the array updater thread only if it's not alive
-    if not thread.is_alive():
-        thread = socketio.start_background_task(jumbotron_updater)
+    # Start the array updater thread only if it hasn't been started
+    if not thread_started:
+        socketio.start_background_task(jumbotron_updater)
+        thread_started = True
 
 @app.route('/jumbotron')
 def discover():
@@ -79,5 +84,4 @@ def playVideo(video):
 if __name__ == '__main__':
     # Create empty matrix of pixels
     MATRIX = Jumbotron(ROWS, COLUMNS, PIN)
-    app.run(debug=True, host='0.0.0.0')
     socketio.run(app, host='127.0.0.1', port=5000)

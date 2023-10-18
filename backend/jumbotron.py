@@ -20,7 +20,7 @@ else:
     from mock_rpi_ws281x import PixelStrip, Color
 
 class Pixel:
-    def __init__(self, r=255, g=0, b=0, brightness=100):
+    def __init__(self, r=0, g=0, b=0, brightness=100):
         self._r = r
         self._g = g
         self._b = b
