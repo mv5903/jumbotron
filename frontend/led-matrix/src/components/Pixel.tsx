@@ -11,6 +11,7 @@ const Pixel = ({ pixel }: { pixel: IPixel }) => {
         width: PIXELSIZE,
         height: PIXELSIZE,
         backgroundColor: `rgb(${pixel.r}, ${pixel.g}, ${pixel.b})`,
+        opacity: pixel.brightness as number / 255,
       }}
     ></div>
   );

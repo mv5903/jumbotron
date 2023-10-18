@@ -1,7 +1,6 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext } from "react";
 //import { Jumbotron } from "../../App";
 import JumbotronContext from "../../providers/JumbotronContext";
-import io from 'socket.io-client';  
 
 export default function Navbar() {
   const jumbotronContext = useContext(JumbotronContext);
