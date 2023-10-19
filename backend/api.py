@@ -40,6 +40,8 @@ COLUMNS = 64
 
 MATRIX = None
 
+UPDATES_PER_SECOND = 5;
+
 app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
@@ -51,7 +53,7 @@ def jumbotron_updater():
     while not thread_stop_event.is_set():
         if (MATRIX is not None):
             socketio.emit('array_update', {'data': MATRIX.get2DArrayRepresentation(), 'timestamp' : time.time_ns() }, namespace='/jumbotron')
-            time.sleep(1/60.0)  # approximately 60 times per second
+            time.sleep(1/UPDATES_PER_SECOND)  # approximately 60 times per second
 
 @socketio.on('connect', namespace='/jumbotron')
 def handle_connect(*args):
@@ -105,11 +107,27 @@ def updateAll(r, g, b, brightness):
         "success": True
     }
 
+@app.route('/jumbotron/reset')
+def reset():
+    logger.info("Resetting all pixels to r: 0, g: 0, b: 0, brightness: 0")
+    MATRIX.reset()
+    return {
+        "success": True
+    }
+
+@app.after_request
+def after_request(response):
+    logger.info("After request -- Saving matrix state to file")
+    MATRIX.save_to_file()
+    logger.info("After request -- Matrix state saved to file")
+    return response
+
 # Implement at a later time
 @app.route('/jumbotron/playvideo/<string:video>')
 def playVideo(video):
     logger.info("Playing video: %s [Service Temporarily Unavailable - Not Implemented Yet]", video)
     return make_response("Service Temporarily Unavailable - Not Implemented Yet", 503)
+
 
 if __name__ == '__main__':
     # Create empty matrix of pixels

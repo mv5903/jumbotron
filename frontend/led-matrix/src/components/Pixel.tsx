@@ -1,8 +1,8 @@
 import IPixel from "../interfaces/Pixel";
 
-const PIXELSIZE = "1.2vh";
 
-const Pixel = ({ pixel }: { pixel: IPixel }) => {
+const Pixel = ({ pixel, mini }: { pixel: IPixel, mini: boolean }) => {
+  const PIXELSIZE = mini ? ".2vh" : "1.2vh";
   return (
     <div className="tooltip" data-tip={`Brightness: ${pixel.brightness}`}>
       <div

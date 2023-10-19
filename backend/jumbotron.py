@@ -1,3 +1,5 @@
+SAVEFILE = 'jumbotron.json'
+
 def is_raspberry_pi_4():
     try:
         with open('/proc/cpuinfo', 'r') as f:
@@ -10,6 +12,7 @@ def is_raspberry_pi_4():
         pass
     return False
 
+import json
 import platform
 
 # If we are running on a Raspberry Pi 4, import the real library, otherwise import the mock library 
@@ -41,6 +44,20 @@ class Jumbotron:
         # ws281x specific setup
         self._strip = PixelStrip(rows * columns, pin, freq_hz, dma, invert, brightness, channel)
         self._strip.begin()
+
+        # Check if we have a save file, if so restore preivous state
+        try:
+            with open(SAVEFILE, 'r') as f:
+                data = json.loads(f.read())
+                for row in range(self._rows):
+                    for column in range(self._columns):
+                        self._pixels[row][column].updatePixel(data[row][column]['r'],
+                                                              data[row][column]['g'],
+                                                              data[row][column]['b'],
+                                                              data[row][column]['brightness'])
+                self._update_strip()
+        except:
+            pass
 
     def _update_strip(self):
         for row in range(self._rows):
@@ -77,6 +94,13 @@ class Jumbotron:
         for row in range(self._rows):
             for column in range(self._columns):
                 self._pixels[row][column].updatePixel(r, g, b, brightness)
+
+    def reset(self):
+        self.updateAll(0, 0, 0, 255)
+
+    def save_to_file(self):
+        with open(SAVEFILE, 'w') as f:
+            f.write(json.dumps(self.get2DArrayRepresentation()))
 
     def playVideo(self, video):
         pass # Implement at a later time

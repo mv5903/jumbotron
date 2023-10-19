@@ -3,6 +3,7 @@ import "./App.css";
 import Jumbotron from "./components/Jumbotron";
 import Navbar from "./components/nav/Navbar";
 import JumbotronContext from "./providers/JumbotronContext";
+import Editor from "./components/Editor";
 
 export interface Jumbotron {
   rows: Number;
@@ -89,7 +90,7 @@ function App() {
         value={{ jumbotron: jumbotron, setJumbotron: setJumbotronHelper }}
       >
         <Navbar />
-        <Jumbotron />
+        <Editor />
       </JumbotronContext.Provider>
     </div>
   );
