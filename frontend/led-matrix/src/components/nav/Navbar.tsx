@@ -15,7 +15,7 @@ export default function Navbar() {
         <h2 className="text-green-300 text-xl">{`${jumbotron.rows} Rows x ${jumbotron.columns} Columns`}</h2>
       </div>
       <div className="flex-1 text-center">
-        <h2 className="text-blue-400 text-xl">{jumbotron.ip}</h2>
+        <h2 className="text-blue-400 text-xl">{jumbotron.ip}:{jumbotron.port}</h2>
         <h4>{`Connected`}</h4>
       </div>
       <div className="flex-1 text-right">

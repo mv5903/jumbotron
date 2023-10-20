@@ -10,6 +10,8 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
   const [pollingRate, setPollingRate] = useState<number>(0); 
   const [isConnected, setIsConnected] = useState<boolean>(true);
   const [tryAgain, setTryAgain] = useState<boolean>(false);
+  const [isDrawing, setIsDrawing] = useState<boolean>(false);
+
 
   const PIXELSIZE = mini ? ".2vh" : "1.2vh";
 
@@ -38,9 +40,18 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
   }, [jumbotron]);
 
   useEffect(() => {
+      const handleMouseUp = () => setIsDrawing(false);
+      window.addEventListener('mouseup', handleMouseUp);
+
+      return () => window.removeEventListener('mouseup', handleMouseUp);
+  }, []);
+
+
+  useEffect(() => {
     //if (editable) return;
     // Connect to the server
-    const socket = io(`http://${jumbotron.ip}:5000/jumbotron`);
+    console.log(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron`);
+    const socket = io(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron`);
 
     const intervalId = setInterval(() => {
       setPollingRate(tempCounter.current);
@@ -124,8 +135,8 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
             <div className="grid grid-cols-64 gap-1 border-2 border-red-200 pb-4 px-2">
               {pixels?.map((pixelArr, rowIndex) => 
                 pixelArr.map((pixel, colIndex) => (
-                  <div className="m-0 p-0 cursor-pointer" style={{ display: 'inline-block', height: PIXELSIZE }} onClick={() => pixelClicked(rowIndex, colIndex)} >
-                    <Pixel key={`${rowIndex}-${colIndex}`} mini={false} pixel={pixel} />
+                  <div key={`${rowIndex}-${colIndex}`}  className="m-0 p-0 cursor-pointer" style={{ display: 'inline-block', height: PIXELSIZE }} onClick={() => pixelClicked(rowIndex, colIndex)} onMouseDown={() => { setIsDrawing(true); pixelClicked(rowIndex, colIndex); }} onMouseUp={() => setIsDrawing(false)} onMouseOver={() => { if (isDrawing) pixelClicked(rowIndex, colIndex); }} >
+                    <Pixel mini={false} pixel={pixel} />
                   </div>
                 ))
               )}

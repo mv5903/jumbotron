@@ -1,10 +1,5 @@
 import { createContext } from "react";
-
-interface Jumbotron {
-  rows: Number;
-  columns: Number;
-  ip: string;
-}
+import Jumbotron from "../interfaces/Jumbotron";
 
 interface JumbotronContextType {
   jumbotron: Jumbotron;

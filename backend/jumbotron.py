@@ -104,6 +104,16 @@ class Jumbotron:
                 self._pixels[row][column].updatePixel(r, g, b, brightness)
         self._update_strip()
 
+    def update_from_matrix_array(self, matrix):
+        for row in range(self._rows):
+            for column in range(self._columns):
+                self._pixels[row][column].updatePixel(matrix[row][column]['r'],
+                                                      matrix[row][column]['g'],
+                                                      matrix[row][column]['b'],
+                                                      matrix[row][column]['brightness'])
+        self._update_strip()
+        
+
     def get2DArrayRepresentation(self):
         return [[{
                 'r': self._pixels[row][column]._r,
@@ -118,7 +128,3 @@ class Jumbotron:
     def save_to_file(self):
         with open(SAVEFILE, 'w') as f:
             f.write(json.dumps(self.get2DArrayRepresentation()))
-
-    def playVideo(self, video):
-        pass # do this later
-

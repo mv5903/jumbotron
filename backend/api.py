@@ -1,4 +1,4 @@
-from flask import Flask, make_response
+from flask import Flask, make_response, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from threading import Event
@@ -7,6 +7,7 @@ import eventlet
 import logging
 import sys
 from logging.handlers import TimedRotatingFileHandler
+from PIL import Image
 
 from jumbotron import Jumbotron
 
@@ -48,6 +49,24 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 thread_started = False
 thread_stop_event = Event()
+
+def convert_image_to_matrix(image):
+    # Resize image to match Jumbotron resolution
+    image = image.resize((COLUMNS, ROWS))
+    
+    # Convert image to RGB
+    image = image.convert("RGB")
+
+    matrix = []
+    for row in range(ROWS):
+        matrix_row = []
+        for column in range(COLUMNS):
+            r, g, b = image.getpixel((column, row))
+            matrix_row.append({'r': r, 'g': g, 'b': b, 'brightness': 255})  # Assuming full brightness
+        matrix.append(matrix_row)
+
+    return matrix
+
 
 def jumbotron_updater():
     while not thread_stop_event.is_set():
@@ -121,6 +140,22 @@ def after_request(response):
     MATRIX.save_to_file()
     logger.info("After request -- Matrix state saved to file")
     return response
+
+@app.route('/jumbotron/upload', methods=['POST'])
+def upload_image():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part in the request.'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No file selected for uploading.'}), 400
+
+    if file:
+        image = Image.open(file.stream)
+        matrix_representation = convert_image_to_matrix(image)
+        MATRIX.update_from_matrix_array(matrix_representation)
+        # Optional: Store or use this matrix representation as needed.
+        return jsonify(matrix_representation)
 
 # Implement at a later time
 @app.route('/jumbotron/playvideo/<string:video>')
