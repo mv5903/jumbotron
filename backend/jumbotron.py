@@ -28,7 +28,7 @@ class Pixel:
         self._g = g
         self._b = b
         self._brightness = brightness
-    
+
     def updatePixel(self, r, g, b, brightness):
         self._r = r
         self._g = g
@@ -45,7 +45,7 @@ class Jumbotron:
         self._strip = PixelStrip(rows * columns, pin, freq_hz, dma, invert, brightness, channel)
         self._strip.begin()
 
-        # Check if we have a save file, if so restore preivous state
+        # Try to load saved state
         try:
             with open(SAVEFILE, 'r') as f:
                 data = json.loads(f.read())
@@ -55,19 +55,54 @@ class Jumbotron:
                                                               data[row][column]['g'],
                                                               data[row][column]['b'],
                                                               data[row][column]['brightness'])
-                self._update_strip()
-        except:
-            pass
+        except Exception as e:
+            print(f"Error loading saved data: {e}")
+        
+        # Ensure LEDs reflect current state
+        self._update_strip()
 
     def _update_strip(self):
         for row in range(self._rows):
             for column in range(self._columns):
                 pixel = self._pixels[row][column]
-                index = row * self._columns + column
-                self._strip.setPixelColor(index, Color(int(pixel._r * pixel._brightness),
-                                                       int(pixel._g * pixel._brightness),
-                                                       int(pixel._b * pixel._brightness)))
+                
+                # Map the row from top-left (React layout) to bottom-left (LED wiring)
+                mapped_row = self._rows - row - 1
+
+                # Adjusting the index based on the zig-zag layout
+                if mapped_row % 2 == 0:  # If it's an even row (0-indexed)
+                    index = (mapped_row * self._columns) + column
+                else:  # If it's an odd row (0-indexed)
+                    index = (mapped_row * self._columns) + (self._columns - column - 1)
+
+                brightness_factor = pixel._brightness / 100.0
+                self._strip.setPixelColor(index, Color(int(pixel._r * brightness_factor),
+                                                    int(pixel._g * brightness_factor),
+                                                    int(pixel._b * brightness_factor)))
+
         self._strip.show()
+
+
+
+    def updatePixel(self, row, column, r, g, b, brightness):
+        self._pixels[row][column].updatePixel(r, g, b, brightness)
+        self._update_strip()
+
+    def updateRow(self, row, r, g, b, brightness):
+        for column in range(self._columns):
+            self._pixels[row][column].updatePixel(r, g, b, brightness)
+        self._update_strip()
+
+    def updateColumn(self, column, r, g, b, brightness):
+        for row in range(self._rows):
+            self._pixels[row][column].updatePixel(r, g, b, brightness)
+        self._update_strip()
+
+    def updateAll(self, r, g, b, brightness):
+        for row in range(self._rows):
+            for column in range(self._columns):
+                self._pixels[row][column].updatePixel(r, g, b, brightness)
+        self._update_strip()
 
     def get2DArrayRepresentation(self):
         return [[{
@@ -76,25 +111,7 @@ class Jumbotron:
                 'b': self._pixels[row][column]._b,
                 'brightness': self._pixels[row][column]._brightness
             } for column in range(self._columns)] for row in range(self._rows)]
-
-    def updatePixel(self, row, column, r, g, b, brightness):
-        self._pixels[row][column].updatePixel(r, g, b, brightness)
-        self._update_strip()
-
-
-    def updateRow(self, row, r, g, b, brightness):
-        for column in range(self._columns):
-            self._pixels[row][column].updatePixel(r, g, b, brightness)
     
-    def updateColumn(self, column, r, g, b, brightness):
-        for row in range(self._rows):
-            self._pixels[row][column].updatePixel(r, g, b, brightness)
-
-    def updateAll(self, r, g, b, brightness):
-        for row in range(self._rows):
-            for column in range(self._columns):
-                self._pixels[row][column].updatePixel(r, g, b, brightness)
-
     def reset(self):
         self.updateAll(0, 0, 0, 255)
 
@@ -103,4 +120,5 @@ class Jumbotron:
             f.write(json.dumps(self.get2DArrayRepresentation()))
 
     def playVideo(self, video):
-        pass # Implement at a later time
+        pass # do this later
+
