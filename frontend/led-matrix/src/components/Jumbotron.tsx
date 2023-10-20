@@ -50,7 +50,7 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
     // Register an event listener for the 'array_update' event
     socket.on('array_update', (response: { data: IPixel[][], timestamp: number }) => {
       setIsConnected(true);
-      let latency = (Date.now() - (response.timestamp / 1000000));
+      let latency = Math.abs((Date.now() - (response.timestamp / 1000000)));
       setLatency(latency.toFixed(0));
       setPixels(response.data);
       tempCounter.current++;

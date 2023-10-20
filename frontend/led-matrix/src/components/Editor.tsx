@@ -61,7 +61,7 @@ export default function Editor() {
     
     return (
         <div>
-            <div className="join absolute left-14 mt-6">
+            <div className="join absolute left-14 top-0" style={{ marginTop: '12vh' }}>
                 <button className={`btn join-item ${!editable && 'btn-active'}`} onClick={() => setEditable(false)}><FaEye /> View</button>
                 <button className={`btn join-item ${editable && 'btn-active'}`} onClick={() => setEditable(true)}><FaEdit /> Edit</button>
             </div>
