@@ -34,7 +34,7 @@ logger.addHandler(stream_handler)
 
 eventlet.monkey_patch()
 
-PIN = 18
+PIN = 21
 
 ROWS = 48
 COLUMNS = 64
@@ -50,7 +50,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 thread_started = False
 thread_stop_event = Event()
 
-def convert_image_to_matrix(image):
+def convert_image_to_matrix(image, brightness=100):
     # Resize image to match Jumbotron resolution
     image = image.resize((COLUMNS, ROWS))
     
@@ -62,7 +62,7 @@ def convert_image_to_matrix(image):
         matrix_row = []
         for column in range(COLUMNS):
             r, g, b = image.getpixel((column, row))
-            matrix_row.append({'r': r, 'g': g, 'b': b, 'brightness': 255})  # Assuming full brightness
+            matrix_row.append({'r': r, 'g': g, 'b': b, 'brightness': brightness})  # Assuming full brightness
         matrix.append(matrix_row)
 
     return matrix
@@ -141,8 +141,8 @@ def after_request(response):
     logger.info("After request -- Matrix state saved to file")
     return response
 
-@app.route('/jumbotron/upload', methods=['POST'])
-def upload_image():
+@app.route('/jumbotron/upload/<int:brightness>', methods=['POST'])
+def upload_image(brightness):
     if 'file' not in request.files:
         return jsonify({'error': 'No file part in the request.'}), 400
 
@@ -152,7 +152,7 @@ def upload_image():
 
     if file:
         image = Image.open(file.stream)
-        matrix_representation = convert_image_to_matrix(image)
+        matrix_representation = convert_image_to_matrix(image, brightness)
         MATRIX.update_from_matrix_array(matrix_representation)
         # Optional: Store or use this matrix representation as needed.
         return jsonify(matrix_representation)
