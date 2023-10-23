@@ -1,3 +1,5 @@
+import json
+import os
 from flask import Flask, make_response, request, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -42,6 +44,8 @@ COLUMNS = 64
 MATRIX = None
 
 UPDATES_PER_SECOND = 5;
+
+SAVES_DIR = "saves"
 
 app = Flask(__name__)
 CORS(app)
@@ -134,12 +138,6 @@ def reset():
         "success": True
     }
 
-@app.after_request
-def after_request(response):
-    logger.info("After request -- Saving matrix state to file")
-    MATRIX.save_to_file()
-    logger.info("After request -- Matrix state saved to file")
-    return response
 
 @app.route('/jumbotron/upload/<int:brightness>', methods=['POST'])
 def upload_image(brightness):
@@ -156,6 +154,41 @@ def upload_image(brightness):
         MATRIX.update_from_matrix_array(matrix_representation)
         # Optional: Store or use this matrix representation as needed.
         return jsonify(matrix_representation)
+    
+@app.route('/jumbotron/save_current_matrix', methods=['POST'])
+def save_current_matrix():
+    # Ensure the "saves" directory exists
+    if not os.path.exists(SAVES_DIR):
+        os.makedirs(SAVES_DIR)
+
+    # Generate a unique filename based on timestamp
+    filename = f"{int(time.time())}.json"
+    filepath = os.path.join(SAVES_DIR, filename)
+
+    with open(filepath, 'w') as file:
+        json.dump(MATRIX.get2DArrayRepresentation(), file)
+
+    return jsonify({"success": True, "filename": filename})
+
+@app.route('/jumbotron/get_saved_matrices')
+def get_saved_matrices():
+    if not os.path.exists(SAVES_DIR):
+        os.makedirs(SAVES_DIR)
+
+    files = [f for f in os.listdir(SAVES_DIR) if os.path.isfile(os.path.join(SAVES_DIR, f))]
+    return jsonify(files)
+
+@app.route('/jumbotron/play_saved_matrix/<string:filename>')
+def play_saved_matrix(filename):
+    filepath = os.path.join(SAVES_DIR, filename)
+
+    with open(filepath, 'r') as file:
+        saved_matrix = json.load(file)
+
+    MATRIX.update_from_matrix_array(saved_matrix)
+    
+    return jsonify({"success": True})
+
 
 # Implement at a later time
 @app.route('/jumbotron/playvideo/<string:video>')
@@ -163,6 +196,12 @@ def playVideo(video):
     logger.info("Playing video: %s [Service Temporarily Unavailable - Not Implemented Yet]", video)
     return make_response("Service Temporarily Unavailable - Not Implemented Yet", 503)
 
+@app.after_request
+def after_request(response):
+    logger.info("After request -- Saving matrix state to file")
+    MATRIX.save_to_file()
+    logger.info("After request -- Matrix state saved to file")
+    return response
 
 if __name__ == '__main__':
     # Create empty matrix of pixels

@@ -2,6 +2,7 @@ import { useContext, useRef, useState } from "react";
 import Jumbotron from "./Jumbotron";
 import { FaArrowsAltH, FaArrowsAltV, FaBorderAll, FaEdit, FaEraser, FaEye, FaPencilAlt } from "react-icons/fa";
 import JumbotronContext from "../providers/JumbotronContext";
+import Saver from "./Saver";
 
 enum EditMode {
     ROW,
@@ -73,7 +74,7 @@ export default function Editor() {
         formData.append("file", file);
 
         try {
-            await fetch(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron/upload`, {
+            await fetch(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron/upload/${brightness}`, {
                 method: "POST",
                 body: formData
             });
@@ -96,6 +97,7 @@ export default function Editor() {
                         <Jumbotron editable={true} mini={false} pixelClicked={pixelClicked} />
                     </div>
                     <Jumbotron editable={false} mini={true} pixelClicked={pixelClicked} />
+                    <Saver />
                 </>
                 :
                 <Jumbotron editable={false} mini={false} pixelClicked={pixelClicked} />

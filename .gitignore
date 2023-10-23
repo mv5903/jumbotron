@@ -3,4 +3,5 @@
 **/.vscode/**
 *.log
 *.log.*
-jumbotron.json
+backend/*.json
+backend/saves/*
