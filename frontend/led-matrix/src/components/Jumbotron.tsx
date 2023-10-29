@@ -48,10 +48,8 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
 
 
   useEffect(() => {
-    //if (editable) return;
     // Connect to the server
-    console.log(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron`);
-    const socket = io(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron`);
+    const socket = io(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron`, { reconnectionAttempts: 5 });
 
     const intervalId = setInterval(() => {
       setPollingRate(tempCounter.current);
@@ -67,21 +65,13 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
       tempCounter.current++;
     });
 
-    // Handle disconnection
-    socket.on('disconnect', () => {
-      setIsConnected(false);
-    });
-
-    socket.on('connect_error', () => {
-      setIsConnected(false);
-    });
-
-    socket.on('connect_timeout', () => {
-      setIsConnected(false);
-    });
-
+    // Handle disconnection and connection issues
+    socket.on('disconnect', () => setIsConnected(false));
+    socket.on('connect_error', () => setIsConnected(false));
+    socket.on('connect_timeout', () => setIsConnected(false));
     socket.on('reconnect_failed', () => {
       setIsConnected(false);
+      // Here you might decide to display an option to try again or notify the user
     });
 
     // Clean up the effect by disconnecting the socket when the component is unmounted
@@ -89,7 +79,7 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
       socket.disconnect();
       clearInterval(intervalId);
     }
-  }, [tryAgain]);  // The empty dependency array means this effect will only run once, similar to componentDidMount
+  }, []);
 
   //Huge Commit
   return (

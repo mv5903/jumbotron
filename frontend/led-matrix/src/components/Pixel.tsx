@@ -1,7 +1,8 @@
+import { memo } from "react";
 import IPixel from "../interfaces/Pixel";
 
 
-const Pixel = ({ pixel, mini }: { pixel: IPixel, mini: boolean }) => {
+const Pixel = memo(({ pixel, mini }: { pixel: IPixel, mini: boolean }) => {
   const PIXELSIZE = mini ? ".2vh" : "1.2vh";
   const DISPLAY_FACTOR = 5;
   return (
@@ -17,6 +18,6 @@ const Pixel = ({ pixel, mini }: { pixel: IPixel, mini: boolean }) => {
       ></div>
     </div>
   );
-};
+});
 
 export default Pixel;

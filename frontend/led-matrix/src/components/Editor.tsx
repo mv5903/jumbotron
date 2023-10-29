@@ -127,13 +127,15 @@ export default function Editor() {
                     <div className="">
                         <div className="mt-4">
                             <h2>Upload Image</h2>
-                            <input 
-                                type="file" 
-                                ref={fileInputRef}
-                                accept="image/*"
-                                className="file-input file-input-bordered file-input-xs w-full max-w-xs text-sm my-3"
-                            />
-                            <button className="btn btn-outline btn-info" onClick={() => handleImageUpload()}>Send</button>
+                            <div className="flex gap-2 justify-center">
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef}
+                                    accept="image/*"
+                                    className="file-input file-input-bordered file-input-xs w-full max-w-xs text-sm my-3"
+                                />
+                                <button className="btn btn-outline btn-info" onClick={() => handleImageUpload()}>Send</button>
+                            </div>
                         </div>
                     </div>
                     <div className="divider"></div>
