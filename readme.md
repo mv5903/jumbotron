@@ -25,7 +25,7 @@ Also, the brightness goes from `0-255` but when I put on the full brightness in 
 #### The Hardware
 
 I'm working on a wiring diagram, but for now, here's a general overview:
-- Raspberry Pi 4 4GB
+- Raspberry Pi 4 4GB (you don't really need this much power but this is just what I happened to have lying around)
 - 11x [BTF-Lighting WS218B Addressable RGB LED Strips](https://www.amazon.com/gp/product/B01CDTEKAG/ref=ppx_yo_dt_b_asin_title_o00_s00?ie=UTF8&psc=1), which with trimming gives my full 64 x 48 matrix (3072 LEDs)
 - 4x [BTF-Lighting 5V 60A Power Supplies](https://www.amazon.com/gp/product/B01D8FLZV6/ref=ppx_yo_dt_b_asin_title_o04_s00?ie=UTF8&psc=1) (I will never come close to using this much power, but I wanted to be on the safe end and have that power available just in case)
 - Jumper wires
