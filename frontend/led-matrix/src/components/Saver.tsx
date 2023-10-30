@@ -83,6 +83,13 @@ export default function Saver() {
         });
     }
 
+
+    useEffect(() => {
+        if (jumbotron) {
+            getSavedMatricies();
+        }
+    }, [jumbotron])
+
     return (
         <div className="absolute right-4 top-0 bg-base-300 p-3" style={{ marginTop: '40vh', width: '16vw' }}>
             <button className="bg-green-600" onClick={() => saveMatrix()}>Save Current Matrix</button>
@@ -92,14 +99,11 @@ export default function Saver() {
                     <h2 className="text-lg">Saved Matricies:</h2>
                     <button className="bg-primary" onClick={() => getSavedMatricies()}><FaRedo/></button>
                 </div>
-                <div className="flex flex-col place-items-center">
+                <div className="flex flex-col place-items-center gap-2">
                     {
                         savedMatricies && savedMatricies.map((matrix, index) => {
                             return(
-                                <div className="flex place-items-center gap-2" key={index}>
-                                    <div className="cursor-pointer" onClick={() => deleteSavedMatrix(matrix)}>
-                                        <FaTrash/>
-                                    </div>
+                                <div className="flex place-items-center gap-2 border-2 border-b-gray-600 p-2" key={index}>
                                     <p 
                                         onMouseEnter={async () => {
                                             const imageUrl = await getImagePreview(matrix);
@@ -109,8 +113,11 @@ export default function Saver() {
                                         onClick={() => activateMatrix(matrix)}
                                         className="cursor-help"
                                     >
-                                        {matrix}
+                                        {matrix.split('.')[0]}
                                     </p>
+                                    <div className="cursor-pointer" onClick={() => deleteSavedMatrix(matrix)}>
+                                        <FaTrash/>
+                                    </div>
                                     {hoveredImageURL && (
                                         <div className="absolute top-0 left-0 z-50">
                                             <img src={hoveredImageURL} alt={`Preview of ${matrix}`} width="100" />
