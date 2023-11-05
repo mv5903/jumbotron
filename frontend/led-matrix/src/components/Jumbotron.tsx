@@ -36,6 +36,9 @@ export default function Jumbotron({ editable, mini, pixelClicked } : { editable:
       }
       jumbotronArr.push(tempArr);
     }
+    // Don't update state unless something changed
+    if (jumbotronArr === pixels) return;
+    
     setPixels(jumbotronArr);
   }, [jumbotron]);
 

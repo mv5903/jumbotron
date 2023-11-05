@@ -13,7 +13,7 @@ const Pixel = memo(({ pixel, mini }: { pixel: IPixel, mini: boolean }) => {
           width: PIXELSIZE,
           height: PIXELSIZE,
           backgroundColor: `rgb(${pixel.r}, ${pixel.g}, ${pixel.b})`,
-          opacity: pixel.brightness as number / 255 * DISPLAY_FACTOR,
+          opacity: pixel.brightness as number / 40 * DISPLAY_FACTOR,
         }}
       ></div>
     </div>

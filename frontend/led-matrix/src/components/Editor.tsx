@@ -24,7 +24,7 @@ export default function Editor() {
 
     //Edits
     const [color, setColor] = useState<string>("#FFFFFF");
-    const [brightness, setBrightness] = useState<number>(100);
+    const [brightness, setBrightness] = useState<number>(0);
     const [editMode, setEditMode] = useState<EditMode>(EditMode.PIXEL);
 
     const handleBrightnessChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -73,13 +73,26 @@ export default function Editor() {
         const formData = new FormData();
         formData.append("file", file);
 
-        try {
-            await fetch(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron/upload/${brightness}`, {
-                method: "POST",
-                body: formData
-            });
-        } catch (error) {
-            console.error("Error uploading image:", error);
+        // Check if file is video or image
+        const isVideo = file.type.startsWith("video");
+        if (isVideo) {
+            try {
+                await fetch(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron/playvideo/${brightness}`, {
+                    method: "POST",
+                    body: formData
+                })
+            } catch (error) {
+                console.error("Error uploading video:", error);
+            }
+        } else {
+            try {
+                await fetch(`http://${jumbotron.ip}:${jumbotron.port}/jumbotron/upload/${brightness}`, {
+                    method: "POST",
+                    body: formData
+                });
+            } catch (error) {
+                console.error("Error uploading image:", error);
+            }
         }
     };
     
@@ -113,7 +126,13 @@ export default function Editor() {
                         </div>
                         <div className="flex justify-between mt-2">
                             <h2>Brightness</h2>
-                            <input type="range" min={0} max="255" value={brightness} onChange={handleBrightnessChange} className="range w-1/2" />
+                            <div className="flex">
+                                <p>0</p>
+                                <div className="tooltip" data-tip={brightness}>
+                                    <input type="range" min={0} max="40" value={brightness} onChange={handleBrightnessChange} className="range w-20 mx-2" />
+                                </div>
+                                <p>40</p>
+                            </div>
                         </div>  
                         <div className="join join-horizontal mt-4 text-sm shadow-md">
                             <button className={`btn tooltip join-item ${editMode == EditMode.PIXEL && 'btn-primary'}`} data-tip="Pencil" onClick={() => setEditMode(EditMode.PIXEL)} style={{ borderRadius: 'revert' }}><FaPencilAlt /></button>
@@ -126,19 +145,19 @@ export default function Editor() {
                     <div className="divider">OR</div>
                     <div className="">
                         <div className="mt-4">
-                            <h2>Upload Image</h2>
-                            <div className="flex gap-2 justify-center">
+                            <h2>Upload Image/Video</h2>
+                            <div className="flex flex-col gap-2 justify-center">
                                 <input 
                                     type="file" 
                                     ref={fileInputRef}
-                                    accept="image/*"
+                                    accept="image/*, video/*"
                                     className="file-input file-input-bordered file-input-xs w-full max-w-xs text-sm my-3"
                                 />
                                 <button className="btn btn-outline btn-info" onClick={() => handleImageUpload()}>Send</button>
                             </div>
                         </div>
+                        <div className="divider">OR</div>
                     </div>
-                    <div className="divider"></div>
                     <h2 className="text-error">Destructive!</h2>
                     <div>
                         <button className="btn btn-outline btn-error mt-2" onClick={() => resetBoard()}>Reset</button>

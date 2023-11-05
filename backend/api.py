@@ -1,5 +1,6 @@
 import json
 import os
+import tempfile
 from flask import Flask, make_response, request, jsonify, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO
@@ -11,6 +12,7 @@ import sys
 from logging.handlers import TimedRotatingFileHandler
 from PIL import Image
 from io import BytesIO
+import cv2
 
 from jumbotron import Jumbotron
 
@@ -260,11 +262,74 @@ def get_saved_matrix_image(filename):
     byte_io.seek(0)
     return send_file(byte_io, mimetype="image/png")
 
-# Implement at a later time
-@app.route('/jumbotron/playvideo/<string:video>')
-def playVideo(video):
-    logger.info("Playing video: %s [Service Temporarily Unavailable - Not Implemented Yet]", video)
-    return make_response("Service Temporarily Unavailable - Not Implemented Yet", 503)
+@app.route('/jumbotron/playvideo/<int:brightness>', methods=['POST'])
+def play_video(brightness):
+    logger.info("Playing video")
+    if 'file' not in request.files:
+        logger.warning("No file part in the request")
+        return jsonify({'error': 'No file part in the request.'}), 400
+
+    file = request.files['file']
+    if file.filename == '':
+        logger.info("No file selected for uploading")
+        return jsonify({'error': 'No file selected for uploading.'}), 400
+    
+    # Create a temporary file to store the uploaded video
+    temp_fd, temp_filename = tempfile.mkstemp()
+    try:
+        # Save the uploaded video file
+        file.save(temp_filename)
+        
+        # Load video using OpenCV
+        video = cv2.VideoCapture(temp_filename)
+        if not video.isOpened():
+            logger.warning("Could not open video")
+            return jsonify({'error': 'Could not open video.'}), 400
+        
+        start_time = time.time()
+        frames_processed = 0
+        
+        while True:
+            # Read a frame from the video
+            ret, frame = video.read()
+            if not ret:
+                # Break the loop if we've reached the end of the video
+                break
+            
+            # Calculate the expected time for this frame
+            expected_time = start_time + (frames_processed / UPDATES_PER_SECOND)
+            
+            # Check if we're ahead or behind the expected time
+            current_time = time.time()
+            if current_time < expected_time:
+                # If ahead, sleep for the remaining duration
+                time.sleep(expected_time - current_time)
+            elif current_time > expected_time + (1 / UPDATES_PER_SECOND):
+                # If behind, skip this frame
+                frames_processed += 1
+                continue
+            
+            # Convert the frame to an image
+            image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            
+            # Convert the image to the matrix representation
+            matrix_representation = convert_image_to_matrix(image)
+            
+            # Update the LED matrix
+            MATRIX.update_from_matrix_array(matrix_representation)
+            
+            frames_processed += 1
+        
+        logger.info("Video played successfully")
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error("Error playing video: %s", str(e))
+        return jsonify({'error': 'Error playing video.'}), 500
+    finally:
+        # Release video capture and remove the temporary file
+        video.release()
+        os.close(temp_fd)
+        os.remove(temp_filename)
 
 @app.after_request
 def after_request(response):
