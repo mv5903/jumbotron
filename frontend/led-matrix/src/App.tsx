@@ -4,6 +4,11 @@ import Jumbotron from "./interfaces/Jumbotron";
 import Navbar from "./components/nav/Navbar";
 import JumbotronContext from "./providers/JumbotronContext";
 import Editor from "./components/Editor";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+} from 'react-router-dom';
 
 enum InfoType {
   ERROR = "text-error",
@@ -102,14 +107,23 @@ function App() {
     );
   }
   return (
-    <div>
-      <JumbotronContext.Provider
-        value={{ jumbotron: jumbotron, setJumbotron: setJumbotronHelper }}
-      >
-        <Navbar />
-        <Editor />
-      </JumbotronContext.Provider>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/">
+          <div>
+            <JumbotronContext.Provider
+              value={{ jumbotron: jumbotron, setJumbotron: setJumbotronHelper }}
+            >
+              <Navbar />
+              <Editor />
+            </JumbotronContext.Provider>
+          </div>
+        </Route>
+        <Route path="/tablet">
+          <p>Tablet view</p>
+        </Route>
+      </Routes>
+    </Router>
   );
 }
 

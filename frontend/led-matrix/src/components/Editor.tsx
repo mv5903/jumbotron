@@ -146,7 +146,7 @@ export default function Editor() {
                     <div className="">
                         <div className="mt-4">
                             <h2>Upload Image/Video</h2>
-                            <div className="flex flex-col gap-2 justify-center">
+                            <div className="flex flex-col gap-2 justify-center place-items-center">
                                 <input 
                                     type="file" 
                                     ref={fileInputRef}
