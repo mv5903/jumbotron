@@ -4,6 +4,9 @@ import Jumbotron from "./interfaces/Jumbotron";
 import Navbar from "./components/nav/Navbar";
 import JumbotronContext from "./providers/JumbotronContext";
 import Editor from "./components/Editor";
+import { FaTrash } from "react-icons/fa";
+import { useLocalStorage } from "./helpers/useLocalStorage";
+import TabletViewMode from "./components/TabletViewMode";
 
 enum InfoType {
   ERROR = "text-error",
@@ -16,6 +19,11 @@ interface JumbotronConnectionString {
   type: InfoType;
 }
 
+interface JumbotronDetails {
+  ip: string;
+  port: string;
+}
+
 function App() {
   const ipFieldRef = useRef<HTMLInputElement>(null);
   const portFieldRef = useRef<HTMLInputElement>(null);
@@ -24,6 +32,7 @@ function App() {
     useState<JumbotronConnectionString | null>();
   const [port, setPort] = useState<string>("5000");
   const [isDesktopView, setIsDesktopView] = useState<boolean | null>(null);
+  const [connections, setConections] = useLocalStorage('connections', [] as JumbotronDetails[]);
 
   function connectTest(view: string) {
     setConnectMessage({ text: "Connecting...", type: InfoType.INFO });
@@ -56,29 +65,13 @@ function App() {
   }
 
   function saveSessionToLocalStorage(ip: string, port: string) {
-    // Store all sessions in local storage in one json object
-    let sessions = localStorage.getItem("sessions");
-    let newSession = {
-      ip,
-      port,
-    };
-    // Make sure this entry doesn't exist already
-    if (sessions) {
-      let sessionsJson = JSON.parse(sessions);
-      let sessionExists = sessionsJson.find((session: any) => {
-        return session.ip === newSession.ip && session.port === newSession.port;
-      });
-      if (sessionExists) {
-        return;
-      }
-    }
-    if (sessions) {
-      let sessionsJson = JSON.parse(sessions);
-      sessionsJson.push(newSession);
-      localStorage.setItem("sessions", JSON.stringify(sessionsJson));
-    } else {
-      localStorage.setItem("sessions", JSON.stringify([newSession]));
-    }
+    let newConnection = { ip, port } as JumbotronDetails;
+    // Make sure this connection isn't already saved
+    let connectionExists = connections.find((connection) => {
+      return connection.ip == ip && connection.port == port;
+    });
+    if (connectionExists) return;
+    setConections([newConnection, ...connections]);
   }
 
   function setJumbotronHelper() {
@@ -86,14 +79,11 @@ function App() {
     setJumbotron(null);
   }
 
-  function getPreviousConnections() {
-    let sessions = localStorage.getItem("sessions");
-    if (sessions) {
-      let sessionsJson = JSON.parse(sessions);
-      return sessionsJson;
-    } else {
-      return [];
-    }
+  function deletePreviousConnection(ip: string, port: string) {
+    let newConnections = connections.filter((connection) => {
+      return connection.ip != ip || connection.port != port;
+    });
+    setConections(newConnections);
   }
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,11 +143,11 @@ function App() {
             <h2 className="text-2xl mb-2">Recent Connections</h2>
             <div>
               {
-                getPreviousConnections().length > 0
+                connections.length > 0
                 ?
-                getPreviousConnections().map((session: any) => {
+                connections.map((session: any) => {
                   return (
-                    <button className="">
+                    <button className="flex justify-content-center place-items-center gap-3">
                       <div className="flex gap-2 justify-content-center" onClick={() => {
                         ipFieldRef.current!.value = session.ip;
                         portFieldRef.current!.value = session.port;
@@ -166,6 +156,11 @@ function App() {
                       }}>
                         <p><span>{session.ip}</span>:<span>{session.port}</span></p>
                       </div>
+                      <a className="btn btn-error btn-sm" onClick={() => {
+                        let confirmDelete = confirm('Are you sure you want to delete this connection?');
+                        if (confirmDelete)
+                          deletePreviousConnection(session.ip, session.port);
+                      }}><FaTrash/></a>
                     </button>
                   );
                 })
@@ -190,10 +185,10 @@ function App() {
     return (
       <div className="mobile">
         <JumbotronContext.Provider value={{ jumbotron: jumbotron, setJumbotron: setJumbotronHelper }} >
-          <button className="bg-red-600" onClick={() => { setIsDesktopView(true); setJumbotronHelper() }}>
+          <button className="absolute top-2 right-4 bg-red-600" onClick={() => { setIsDesktopView(true); setJumbotronHelper() }}>
             Exit
           </button>
-          <p>Mobile View</p>
+          <TabletViewMode />
         </JumbotronContext.Provider>
       </div>
     );

@@ -110,7 +110,7 @@ export default function Editor() {
                         <Jumbotron editable={true} mini={false} pixelClicked={pixelClicked} />
                     </div>
                     <Jumbotron editable={false} mini={true} pixelClicked={pixelClicked} />
-                    <Saver />
+                    <Saver isTablet={false} />
                 </>
                 :
                 <Jumbotron editable={false} mini={false} pixelClicked={pixelClicked} />

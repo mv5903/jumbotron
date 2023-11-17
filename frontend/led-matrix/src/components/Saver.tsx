@@ -4,7 +4,7 @@ import { FaRedo, FaTrash } from "react-icons/fa";
 
 const AFTER_ACTION_TIMEOUT = 50;
 
-export default function Saver() {
+export default function Saver({ isTablet }: { isTablet: boolean }) {
 
     const [savedMatricies, setSavedMatricies] = useState<string[]>([]);
     const [hoveredImageURL, setHoveredImageURL] = useState<string | null>(null);
@@ -90,45 +90,100 @@ export default function Saver() {
         }
     }, [jumbotron])
 
-    return (
-        <div className="absolute right-4 top-0 bg-base-300 p-3" style={{ marginTop: '40vh', width: '16vw' }}>
-            <button className="bg-green-600" onClick={() => saveMatrix()}>Save Current Matrix</button>
-            <div className="divider">OR</div>
-            <div>
-                <div className="flex justify-center place-items-center gap-4 mb-2">
-                    <h2 className="text-lg">Saved Matricies:</h2>
-                    <button className="bg-primary" onClick={() => getSavedMatricies()}><FaRedo/></button>
+    if (!isTablet) {
+        return (
+            <div className="absolute right-4 top-0 bg-base-300 p-3" style={{ marginTop: '40vh', width: '16vw' }}>
+                <button className="bg-green-600" onClick={() => saveMatrix()}>Save Current Matrix</button>
+                <div className="divider">OR</div>
+                <div>
+                    <div className="flex justify-center place-items-center gap-4 mb-2">
+                        <h2 className="text-lg">Saved Matricies:</h2>
+                        <button className="bg-primary" onClick={() => getSavedMatricies()}><FaRedo/></button>
+                    </div>
+                    <div className="flex flex-col place-items-center gap-2">
+                        {
+                            savedMatricies && savedMatricies.map((matrix, index) => {
+                                return(
+                                    <div className="flex place-items-center gap-2 border-2 border-b-gray-600 p-2" key={index}>
+                                        <p 
+                                            onMouseEnter={async () => {
+                                                const imageUrl = await getImagePreview(matrix);
+                                                setHoveredImageURL(imageUrl);
+                                            }}
+                                            onMouseLeave={() => setHoveredImageURL(null)}
+                                            onClick={() => activateMatrix(matrix)}
+                                            className="cursor-help"
+                                        >
+                                            {matrix.split('.')[0]}
+                                        </p>
+                                        <div className="cursor-pointer" onClick={() => deleteSavedMatrix(matrix)}>
+                                            <FaTrash/>
+                                        </div>
+                                        {hoveredImageURL && (
+                                            <div className="absolute top-0 left-0 z-50">
+                                                <img src={hoveredImageURL} alt={`Preview of ${matrix}`} width="100" />
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })
+                        }
+                    </div>
                 </div>
-                <div className="flex flex-col place-items-center gap-2">
+            </div>
+        );
+    }
+    else {
+        const [currentSlide, setCurrentSlide] = useState<number>(0);
+
+        function goToNextSlide() {
+            setCurrentSlide(currentSlide + 1);
+        }
+
+        function goToPreviousSlide() {
+            if (currentSlide > 0)
+                setCurrentSlide(currentSlide - 1);
+        }
+
+        let imagePreviewURL = '';
+
+        useEffect(() => {
+            async function getPreviewURL() {
+                const imageUrl = await getImagePreview(savedMatricies[currentSlide]);
+                if (imageUrl) {
+                    console.log(imageUrl);
+                    imagePreviewURL = imageUrl;
+                }
+            }
+            getPreviewURL();
+        }, [currentSlide, jumbotron]);
+
+        useEffect(() => {
+            getSavedMatricies();
+        }, [])
+
+        return (
+            <div className="absolute w-[98vw] h-[90vh] bottom-0 left-2 right-0 border-2 border-red-100">
+                <h2 className="text-2xl">Saved</h2>
+                <div className="carousel w-full">
                     {
                         savedMatricies && savedMatricies.map((matrix, index) => {
-                            return(
-                                <div className="flex place-items-center gap-2 border-2 border-b-gray-600 p-2" key={index}>
-                                    <p 
-                                        onMouseEnter={async () => {
-                                            const imageUrl = await getImagePreview(matrix);
-                                            setHoveredImageURL(imageUrl);
-                                        }}
-                                        onMouseLeave={() => setHoveredImageURL(null)}
-                                        onClick={() => activateMatrix(matrix)}
-                                        className="cursor-help"
-                                    >
-                                        {matrix.split('.')[0]}
-                                    </p>
-                                    <div className="cursor-pointer" onClick={() => deleteSavedMatrix(matrix)}>
-                                        <FaTrash/>
+                            return (
+                                <div key={index} className="carousel-item relative w-full">
+                                    {
+                                        imagePreviewURL && 
+                                        <img src={imagePreviewURL} className="w-full" />
+                                    }
+                                    <div className="absolute flex justify-between transform -translate-y-1/2 left-5 right-5 top-1/2">
+                                        <a onClick={goToPreviousSlide} className="btn btn-circle">❮</a> 
+                                        <a onClick={goToNextSlide} className="btn btn-circle">❯</a>
                                     </div>
-                                    {hoveredImageURL && (
-                                        <div className="absolute top-0 left-0 z-50">
-                                            <img src={hoveredImageURL} alt={`Preview of ${matrix}`} width="100" />
-                                        </div>
-                                    )}
-                                </div>
+                                </div> 
                             );
                         })
                     }
                 </div>
             </div>
-        </div>
-    );
+        );
+    }
 }
