@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { onMount } from "svelte";
   import { jumbotronInstance, Jumbotron } from "./classes/Jumbotron";
   import JumbotronDashboard from "./components/JumbotronDashboard.svelte";
   import { connections } from './stores/connectionsStore';
@@ -37,7 +38,7 @@
         <p>http://</p>
         <input type="text" bind:value={hostname} on:keydown={e => e.key == 'Enter' && attemptCurrentConnection()} class="input input-bordered w-full max-w-xs" placeholder="Hostname" />
         <p>:</p>
-        <input type="number" bind:value={port} class="input input-bordered w-full max-w-xs" placeholder="Port" />
+        <input type="number" bind:value={port} on:keydown={e => e.key == 'Enter' && attemptCurrentConnection()} class="input input-bordered w-full max-w-xs" placeholder="Port" />
         <p>/jumbotron</p>
       </div>
       <div class="flex flex-col gap-3">
@@ -50,7 +51,7 @@
       <div class="divider">OR</div>
       <h2 class="text-2xl mb-2">Recent Connections</h2>
       <div class="flex gap-3">
-        {#if connections}
+        {#if $connections.length > 0}
           {#each $connections as connection}
           <button class="flex justify-content-center place-items-center gap-3" on:click={() => attemptSelectiveConnection({ hostname: connection.hostname, port: connection.port})}>
             <div class="flex justify-content-center items-center gap-3">

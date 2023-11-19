@@ -122,6 +122,17 @@ class Jumbotron:
                 'brightness': self._pixels[row][column]._brightness
             } for column in range(self._columns)] for row in range(self._rows)]
     
+    def updateBrightness(self, brightness):
+        # Update all pixels to this new brightness
+        for row in range(self._rows):
+            for column in range(self._columns):
+                self._pixels[row][column]._brightness = brightness
+        self._update_strip
+
+    def getBrightness(self):
+        # Return the brightness of the first pixel
+        return self._pixels[0][0]._brightness
+    
     def reset(self):
         self.updateAll(0, 0, 0, 255)
 

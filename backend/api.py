@@ -46,7 +46,7 @@ COLUMNS = 64
 
 MATRIX = None
 
-UPDATES_PER_SECOND = 5;
+UPDATES_PER_SECOND = 30;
 
 SAVES_DIR = "saves"
 
@@ -57,7 +57,7 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 thread_started = False
 thread_stop_event = Event()
 
-def convert_image_to_matrix(image, brightness=100):
+def convert_image_to_matrix(image, brightness=40):
     # Resize image to match Jumbotron resolution
     image = image.resize((COLUMNS, ROWS))
     
@@ -170,6 +170,18 @@ def upload_image(brightness):
         logger.info("Image uploaded successfully")
         return jsonify(matrix_representation)
     
+@app.route('/jumbotron/brightness/<int:brightness>', methods=['POST'])
+def brightness(brightness):
+    logger.info("Updating brightness to %d", brightness)
+    MATRIX.updateBrightness(brightness)
+    return jsonify({"success": True})
+
+@app.route('/jumbotron/brightness')
+def get_brightness():
+    logger.info("Getting brightness")
+    brightness = MATRIX.getBrightness()
+    return jsonify({"brightness": brightness})
+
 @app.route('/jumbotron/save_current_matrix/<string:matrixname>', methods=['POST'])
 def save_current_matrix(matrixname):
     logger.info("Saving current matrix to file: %s", matrixname)

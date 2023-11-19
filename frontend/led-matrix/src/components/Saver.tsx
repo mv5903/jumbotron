@@ -151,7 +151,6 @@ export default function Saver({ isTablet }: { isTablet: boolean }) {
             async function getPreviewURL() {
                 const imageUrl = await getImagePreview(savedMatricies[currentSlide]);
                 if (imageUrl) {
-                    console.log(imageUrl);
                     imagePreviewURL = imageUrl;
                 }
             }
