@@ -77,6 +77,16 @@
             }
         }
     }
+
+    async function saveCurrentHandler() {
+        let name = prompt('Enter a name for this matrix');
+        if (!name) return;
+        if (await jumbotronInstance.saveCurrent(name)) {
+            alert('Saved!');
+        } else {
+            alert('Failed to save!');
+        }
+    }
 </script>
 
 {#if !jumbotronState.isInitialized}
@@ -125,6 +135,12 @@
                 <h2 class="text-error">Reset</h2>
                 <div>
                     <button class="btn btn-outline btn-error mt-2" on:click={eraseAllHandler}>Reset</button>
+                </div>
+            </div>
+            <div>
+                <h2 class="text-warning">Save</h2>
+                <div>
+                    <button class="btn btn-outline btn-warning mt-2" on:click={saveCurrentHandler}>Save</button>
                 </div>
             </div>
             <div>

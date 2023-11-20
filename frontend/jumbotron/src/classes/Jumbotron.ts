@@ -53,6 +53,7 @@ export class Jumbotron {
             const response = await fetch(`http://${hostname}:${port}/jumbotron`);
             const json = await response.json();
             if (json) {
+                console.log(json);
                 this._state.set({
                     hostname,
                     port,
@@ -91,7 +92,8 @@ export class Jumbotron {
     }
 
     async updatePixels() {
-        this.socket = io(`http://${this.hostname}:${this.port}/jumbotron`, { reconnectionAttempts: 5 });
+        let data = get(this._state);
+        this.socket = io(`http://${data.hostname}:${data.port}/jumbotron`, { reconnectionAttempts: 5 });
 
         this.socket.on('array_update', (response: { data: Pixel[][], timestamp: number }) => {
             this.updatesCounter++;
@@ -190,6 +192,22 @@ export class Jumbotron {
         const response = await fetch(`http://${data.hostname}:${data.port}/jumbotron/get_saved_matrix_image/${name}`);
         const blob = await response.blob();
         return URL.createObjectURL(blob);
+    }
+
+    async saveCurrent(name: string) {
+        let data = get(this._state);
+        const response = await fetch(`http://${data.hostname}:${data.port}/jumbotron/save_current_matrix/${name}`, { method: 'POST' });
+        return response.ok;
+    }
+
+    async activateSavedItem(name: string) {
+        let data = get(this._state);
+        await fetch(`http://${data.hostname}:${data.port}/jumbotron/activate_saved_matrix/${name}`, { method: 'POST' });
+    }
+
+    async deleteSavedItem(name: string) {
+        let data = get(this._state);
+        await fetch(`http://${data.hostname}:${data.port}/jumbotron/delete_saved_matrix/${name}`, { method: 'DELETE' });
     }
 
     destroy() {
