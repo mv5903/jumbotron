@@ -8,6 +8,7 @@
     import FaBorderAll from 'svelte-icons/fa/FaBorderAll.svelte';
     import FaEraser from 'svelte-icons/fa/FaEraser.svelte';
     import type { Pixel } from '../classes/Pixel';
+    import SaveLauncher from './SaveLauncher.svelte';
 
     let jumbotronState: Jumbotron;
 
@@ -64,6 +65,18 @@
         if (!file) return;
         jumbotronInstance.uploadImage(file, brightness);
     }
+
+    function saveLauncherHandler() {
+        const saveLauncher = document.getElementById('saveLauncher');
+        if (saveLauncher) {
+            try {
+                // Typescript being typescript :)
+                (saveLauncher as unknown as SaveLauncher).showModal();
+            } catch (e) {
+                console.error(e);
+            }
+        }
+    }
 </script>
 
 {#if !jumbotronState.isInitialized}
@@ -107,9 +120,22 @@
             </div>
         </div>
         <div class="divider">OR</div>
-        <h2 class="text-error">Destructive!</h2>
-        <div>
-            <button class="btn btn-outline btn-error mt-2" on:click={eraseAllHandler}>Reset</button>
+        <div class="flex justify-around">
+            <div>
+                <h2 class="text-error">Reset</h2>
+                <div>
+                    <button class="btn btn-outline btn-error mt-2" on:click={eraseAllHandler}>Reset</button>
+                </div>
+            </div>
+            <div>
+                <h2 class="text-success">Previous</h2>
+                <div>
+                    <button class="btn btn-outline btn-success mt-2" on:click={saveLauncherHandler}>View Previous</button>
+                    <dialog id="saveLauncher" class="modal modal-bottom sm:modal-middle">
+                        <SaveLauncher />
+                    </dialog>
+                </div>
+            </div>
         </div>
     </div>
     <div class="grid gap-1 w-[60vw] ms-72" style={`grid-template-columns: repeat(${jumbotronState.columns}, minmax(0, 1fr)); grid-template-rows: repeat(${jumbotronState.rows}, minmax(0, 1fr));`}>

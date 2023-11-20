@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { onMount } from "svelte";
+  import { onMount } from "svelte";
   import { jumbotronInstance, Jumbotron } from "./classes/Jumbotron";
   import JumbotronDashboard from "./components/JumbotronDashboard.svelte";
   import { connections } from './stores/connectionsStore';
@@ -25,6 +25,11 @@
     await jumbotronInstance.attemptConnection(connection.hostname, connection.port);
   }
 </script>
+
+<svelte:head>
+  <title>Jumbotron</title>
+  <link rel="icon" href="/jumbotron.svg" />
+</svelte:head>
 
 <main class="w-full">
   {#if !jumbotronState}

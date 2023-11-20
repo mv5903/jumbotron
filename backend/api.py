@@ -13,6 +13,7 @@ from logging.handlers import TimedRotatingFileHandler
 from PIL import Image
 from io import BytesIO
 import cv2
+from threading import Thread
 
 from jumbotron import Jumbotron
 
@@ -56,6 +57,20 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 thread_started = False
 thread_stop_event = Event()
+
+playback_control = {"playing": True}
+
+STATE_FILE = "last_state.json"
+
+def save_state(state):
+    with open(STATE_FILE, 'w') as file:
+        json.dump(state, file)
+
+def load_state():
+    if os.path.exists(STATE_FILE):
+        with open(STATE_FILE, 'r') as file:
+            return json.load(file)
+    return None
 
 def convert_image_to_matrix(image, brightness=40):
     # Resize image to match Jumbotron resolution
@@ -168,6 +183,7 @@ def upload_image(brightness):
         matrix_representation = convert_image_to_matrix(image, brightness)
         MATRIX.update_from_matrix_array(matrix_representation)
         logger.info("Image uploaded successfully")
+        save_state({'type': 'image', 'content': matrix_representation})
         return jsonify(matrix_representation)
     
 @app.route('/jumbotron/brightness/<int:brightness>', methods=['POST'])
@@ -206,8 +222,16 @@ def get_saved_matrices():
         os.makedirs(SAVES_DIR)
 
     files = [f for f in os.listdir(SAVES_DIR) if os.path.isfile(os.path.join(SAVES_DIR, f))]
+    # Remove .json
+    data = []
+    for i in range(len(files)):
+        data.append({
+            "filename": files[i],
+            "image": f"/jumbotron/get_saved_matrix_image/{files[i]}"
+        })
+
     logger.info("Saved matrices retrieved successfully")
-    return jsonify(files)
+    return jsonify(data)
 
 @app.route('/jumbotron/play_saved_matrix/<string:filename>')
 def play_saved_matrix(filename):
@@ -274,9 +298,45 @@ def get_saved_matrix_image(filename):
     byte_io.seek(0)
     return send_file(byte_io, mimetype="image/png")
 
+def video_playback_thread(temp_filename):
+    try:
+        video = cv2.VideoCapture(temp_filename)
+        
+        if not video.isOpened():
+            logger.warning("Could not open video")
+            return
+
+        start_time = time.time()
+        frames_processed = 0
+        
+        while playback_control["playing"]:
+            ret, frame = video.read()
+            if not ret:
+                # Reset the video to the start
+                video.set(cv2.CAP_PROP_POS_FRAMES, 0)
+                start_time = time.time()  # Reset the start time
+                frames_processed = 0
+                continue
+
+            expected_time = start_time + (frames_processed / UPDATES_PER_SECOND)
+            current_time = time.time()
+            if current_time < expected_time:
+                time.sleep(expected_time - current_time)
+            elif current_time > expected_time + (1 / UPDATES_PER_SECOND):
+                frames_processed += 1
+                continue
+
+            image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            matrix_representation = convert_image_to_matrix(image)
+            MATRIX.update_from_matrix_array(matrix_representation)
+            frames_processed += 1
+
+        video.release()
+    except Exception as e:
+        logger.error("Error in video playback thread: %s", str(e))
+
 @app.route('/jumbotron/playvideo/<int:brightness>', methods=['POST'])
 def play_video(brightness):
-    logger.info("Playing video")
     if 'file' not in request.files:
         logger.warning("No file part in the request")
         return jsonify({'error': 'No file part in the request.'}), 400
@@ -285,63 +345,30 @@ def play_video(brightness):
     if file.filename == '':
         logger.info("No file selected for uploading")
         return jsonify({'error': 'No file selected for uploading.'}), 400
-    
-    # Create a temporary file to store the uploaded video
+
     temp_fd, temp_filename = tempfile.mkstemp()
     try:
-        # Save the uploaded video file
         file.save(temp_filename)
-        
-        # Load video using OpenCV
-        video = cv2.VideoCapture(temp_filename)
-        if not video.isOpened():
-            logger.warning("Could not open video")
-            return jsonify({'error': 'Could not open video.'}), 400
-        
-        start_time = time.time()
-        frames_processed = 0
-        
-        while True:
-            # Read a frame from the video
-            ret, frame = video.read()
-            if not ret:
-                # Break the loop if we've reached the end of the video
-                break
-            
-            # Calculate the expected time for this frame
-            expected_time = start_time + (frames_processed / UPDATES_PER_SECOND)
-            
-            # Check if we're ahead or behind the expected time
-            current_time = time.time()
-            if current_time < expected_time:
-                # If ahead, sleep for the remaining duration
-                time.sleep(expected_time - current_time)
-            elif current_time > expected_time + (1 / UPDATES_PER_SECOND):
-                # If behind, skip this frame
-                frames_processed += 1
-                continue
-            
-            # Convert the frame to an image
-            image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            
-            # Convert the image to the matrix representation
-            matrix_representation = convert_image_to_matrix(image)
-            
-            # Update the LED matrix
-            MATRIX.update_from_matrix_array(matrix_representation)
-            
-            frames_processed += 1
-        
-        logger.info("Video played successfully")
+        playback_control["playing"] = True
+        save_state({'type': 'video', 'filename': temp_filename, 'brightness': brightness})
+        thread = Thread(target=video_playback_thread, args=(temp_filename,))
+        thread.start()
         return jsonify({'success': True})
     except Exception as e:
         logger.error("Error playing video: %s", str(e))
         return jsonify({'error': 'Error playing video.'}), 500
     finally:
-        # Release video capture and remove the temporary file
-        video.release()
         os.close(temp_fd)
-        os.remove(temp_filename)
+
+@app.before_request
+def before_request():
+    logger.info("Before request -- Stopping video playback")
+    if request.method != 'POST':
+        return
+    if (playback_control["playing"]):
+        playback_control["playing"] = False
+        time.sleep(1/UPDATES_PER_SECOND)
+
 
 @app.after_request
 def after_request(response):
@@ -356,5 +383,15 @@ if __name__ == '__main__':
     MATRIX = Jumbotron(ROWS, COLUMNS, PIN)
     logger.info("Matrix created successfully")
     logger.info("Starting Jumbotron API")
+    last_state = load_state()
+    if last_state:
+        if last_state['type'] == 'video':
+            # Play the video
+            playback_control["playing"] = True
+            thread = Thread(target=video_playback_thread, args=(last_state['filename'],))
+            thread.start()
+        elif last_state['type'] == 'image':
+            # Display the image
+            MATRIX.update_from_matrix_array(last_state['content'])
     socketio.run(app, host='0.0.0.0', port=5000)
     logger.info("Jumbotron API started successfully")

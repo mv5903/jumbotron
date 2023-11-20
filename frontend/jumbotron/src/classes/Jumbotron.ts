@@ -178,6 +178,20 @@ export class Jumbotron {
         }
     };
 
+    async getSavedItems() {
+        let data = get(this._state);
+        const response = await fetch(`http://${data.hostname}:${data.port}/jumbotron/get_saved_matrices`);
+        const json = await response.json();
+        return json;
+    }
+
+    async getSavedItemPreview(name: string) {
+        let data = get(this._state);
+        const response = await fetch(`http://${data.hostname}:${data.port}/jumbotron/get_saved_matrix_image/${name}`);
+        const blob = await response.blob();
+        return URL.createObjectURL(blob);
+    }
+
     destroy() {
         if (this.fpsTimer) {
             window.clearInterval(this.fpsTimer);
