@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tempfile
 from flask import Flask, make_response, request, jsonify, send_file
 from flask_cors import CORS
@@ -14,7 +15,7 @@ from PIL import Image
 from io import BytesIO
 import cv2
 from threading import Thread
-
+from werkzeug.utils import secure_filename
 from jumbotron import Jumbotron
 
 # Log format
@@ -39,6 +40,8 @@ stream_handler.setFormatter(logging.Formatter(log_format))
 logger.addHandler(stream_handler)
 
 eventlet.monkey_patch()
+
+temp_filename = None
 
 PIN = 21
 
@@ -160,6 +163,8 @@ def updateAll(r, g, b, brightness):
 @app.route('/jumbotron/reset')
 def reset():
     logger.info("Resetting all pixels to r: 0, g: 0, b: 0, brightness: 0")
+    playback_control["playing"] = False
+    time.sleep(1/UPDATES_PER_SECOND)
     MATRIX.reset()
     return {
         "success": True
@@ -179,6 +184,8 @@ def upload_image(brightness):
         return jsonify({'error': 'No file selected for uploading.'}), 400
 
     if file:
+        playback_control["playing"] = False
+        time.sleep(1/UPDATES_PER_SECOND)
         image = Image.open(file.stream)
         matrix_representation = convert_image_to_matrix(image, brightness)
         MATRIX.update_from_matrix_array(matrix_representation)
@@ -200,28 +207,51 @@ def get_brightness():
 
 @app.route('/jumbotron/save_current_matrix/<string:matrixname>', methods=['POST'])
 def save_current_matrix(matrixname):
-    logger.info("Saving current matrix to file: %s", matrixname)
+    logger.info("Saving current content to file: %s", matrixname)
     # Ensure the "saves" directory exists
     if not os.path.exists(SAVES_DIR):
         logger.info("Creating saves directory")
         os.makedirs(SAVES_DIR)
 
+    save_data = {}
+    if playback_control["playing"]:
+        # Handle video
+        logger.info("Video is currently playing - saving the video file")
+        try:
+            current_video_filepath = temp_filename
+            save_data['type'] = 'video'
+            save_data['content'] = current_video_filepath  # Save the path, not the file itself
+        except Exception as e:
+            logger.error(f"Error saving video: {str(e)}")
+            return jsonify({"success": False, "error": str(e)}), 500
+    else:
+        # Handle still frame
+        logger.info("Saving current matrix as a still frame")
+        current_matrix_state = MATRIX.get2DArrayRepresentation()
+        save_data['type'] = 'image'
+        save_data['content'] = current_matrix_state
+
     filename = f"{matrixname}.json"
     filepath = os.path.join(SAVES_DIR, filename)
+    try:
+        with open(filepath, 'w') as file:
+            json.dump(save_data, file)
+        logger.info("Current content saved successfully")
+        return jsonify({"success": True, "filename": filename})
+    except Exception as e:
+        logger.error(f"Error saving content: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
-    with open(filepath, 'w') as file:
-        json.dump(MATRIX.get2DArrayRepresentation(), file)
 
-    logger.info("Current matrix saved successfully")
-    return jsonify({"success": True, "filename": filename})
 
 @app.route('/jumbotron/get_saved_matrices')
 def get_saved_matrices():
-    logger.info("Getting saved matrices")
+    #logger.info("Getting saved matrices")
     if not os.path.exists(SAVES_DIR):
         os.makedirs(SAVES_DIR)
 
-    files = [f for f in os.listdir(SAVES_DIR) if os.path.isfile(os.path.join(SAVES_DIR, f))]
+    files = [f for f in os.listdir(SAVES_DIR) if os.path.isfile(os.path.join(SAVES_DIR, f)) and f.endswith(".json")]
+
     # Remove .json
     data = []
     for i in range(len(files)):
@@ -230,7 +260,7 @@ def get_saved_matrices():
             "image": f"/jumbotron/get_saved_matrix_image/{files[i]}"
         })
 
-    logger.info("Saved matrices retrieved successfully")
+    #logger.info("Saved matrices retrieved successfully")
     return jsonify(data)
 
 @app.route('/jumbotron/play_saved_matrix/<string:filename>')
@@ -261,44 +291,106 @@ def delete_saved_matrix(filename):
     
 @app.route('/jumbotron/activate_saved_matrix/<string:filename>', methods=['POST'])
 def activate_saved_matrix(filename):
-    # Load the saved matrix JSON file
+    global temp_filename  # If handling video, update the global video filename
+
     logger.info("Activating saved matrix: %s", filename)
     filepath = os.path.join(SAVES_DIR, filename)
-    # Load saved matrix onto the Jumbotron
+
     try:
         with open(filepath, 'r') as file:
-            saved_matrix = json.load(file)
+            saved_content = json.load(file)
+
+        # Check if saved_content is a dictionary
+        if not isinstance(saved_content, dict):
+            logger.error("Invalid content format in file: %s", filename)
+            return jsonify({"success": False, "error": "Invalid content format."}), 400
+
+        if 'type' not in saved_content or 'content' not in saved_content:
+            logger.error("Missing required keys in saved content: %s", filename)
+            return jsonify({"success": False, "error": "Invalid content format."}), 400
+        
+        playback_control["playing"] = False
+        time.sleep(1/UPDATES_PER_SECOND)
+
+        if saved_content['type'] == 'video':
+            video_path = saved_content['content']
+            if os.path.exists(video_path):
+                # Play the video
+                playback_control["playing"] = True
+                temp_filename = video_path  # Update the global variable
+                thread = Thread(target=video_playback_thread)
+                thread.start()
+            else:
+                logger.error("Video file not found: %s", video_path)
+                return jsonify({"success": False, "error": "Video file not found."}), 404
+
+        elif saved_content['type'] == 'image':
+            # Display the image
+            MATRIX.update_from_matrix_array(saved_content['content'])
+
+        logger.info("Saved content activated successfully")
+        return jsonify({"success": True})
+
     except FileNotFoundError:
-        logger.error("Matrix file not found: %s", filename)
+        logger.error("Saved content file not found: %s", filename)
         return jsonify({"success": False, "error": "File does not exist."}), 404
-    
-    MATRIX.update_from_matrix_array(saved_matrix)
-    logger.info("Saved matrix activated successfully")
-    return jsonify({"success": True})
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON format in file: %s", filename)
+        return jsonify({"success": False, "error": "Invalid JSON format."}), 400
+    except Exception as e:
+        logger.error(f"Error activating saved content: {str(e)}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
     
 @app.route('/jumbotron/get_saved_matrix_image/<string:filename>')
 def get_saved_matrix_image(filename):
-    logger.info("Getting image preview for saved matrix: %s", filename)
+    logger.info("Getting preview for saved content: %s", filename)
     filepath = os.path.join(SAVES_DIR, filename)
 
-    # Load the saved matrix JSON file
     try:
         with open(filepath, 'r') as file:
-            saved_matrix = json.load(file)
+            saved_content = json.load(file)
+
+        if saved_content['type'] == 'video':
+            # Handle video file - generate a thumbnail
+            video_path = saved_content['content']
+            try:
+                cap = cv2.VideoCapture(video_path)
+                success, frame = cap.read()
+                if not success:
+                    logger.error("Failed to capture frame from video: %s", video_path)
+                    return jsonify({"success": False, "error": "Failed to capture frame from video."}), 500
+                
+                # Convert the frame to an image
+                image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                byte_io = BytesIO()
+                image.save(byte_io, 'PNG')
+                byte_io.seek(0)
+                cap.release()
+                return send_file(byte_io, mimetype='image/png')
+            except Exception as e:
+                logger.error("Error processing video file: %s", str(e))
+                return jsonify({"success": False, "error": str(e)}), 500
+
+        elif saved_content['type'] == 'image':
+            # Handle JSON matrix file
+            image = convert_matrix_to_image(saved_content['content'])
+            byte_io = BytesIO()
+            image.save(byte_io, 'PNG')
+            byte_io.seek(0)
+            return send_file(byte_io, mimetype='image/png')
     except FileNotFoundError:
-        logger.error("Matrix file not found: %s", filename)
+        logger.error("Content file not found: %s", filename)
         return jsonify({"success": False, "error": "File does not exist."}), 404
+    except json.JSONDecodeError:
+        logger.error("Invalid JSON format in file: %s", filename)
+        return jsonify({"success": False, "error": "Invalid JSON format."}), 400
+    except Exception as e:
+        logger.error("Error getting saved content image: %s", str(e))
+        return jsonify({"success": False, "error": str(e)}), 500
 
-    # Convert the saved matrix to an image
-    image = convert_matrix_to_image(saved_matrix)
 
-    # Convert image to bytes and send as response
-    byte_io = BytesIO()
-    image.save(byte_io, "PNG")
-    byte_io.seek(0)
-    return send_file(byte_io, mimetype="image/png")
-
-def video_playback_thread(temp_filename):
+def video_playback_thread():
     try:
         video = cv2.VideoCapture(temp_filename)
         
@@ -337,6 +429,8 @@ def video_playback_thread(temp_filename):
 
 @app.route('/jumbotron/playvideo/<int:brightness>', methods=['POST'])
 def play_video(brightness):
+    global temp_filename  # Keep track of the current video file name
+
     if 'file' not in request.files:
         logger.warning("No file part in the request")
         return jsonify({'error': 'No file part in the request.'}), 400
@@ -346,35 +440,30 @@ def play_video(brightness):
         logger.info("No file selected for uploading")
         return jsonify({'error': 'No file selected for uploading.'}), 400
 
-    temp_fd, temp_filename = tempfile.mkstemp()
+    playback_control["playing"] = False
+    time.sleep(1/UPDATES_PER_SECOND)
+    # Save the file in a permanent location
+    filename = secure_filename(file.filename)  # Use a secure filename
+    permanent_file_path = os.path.join(SAVES_DIR, filename)
+    file.save(permanent_file_path)
+    temp_filename = permanent_file_path  # Update the global variable
+
     try:
-        file.save(temp_filename)
         playback_control["playing"] = True
-        save_state({'type': 'video', 'filename': temp_filename, 'brightness': brightness})
-        thread = Thread(target=video_playback_thread, args=(temp_filename,))
+        save_state({'type': 'video', 'filename': permanent_file_path, 'brightness': brightness})
+        thread = Thread(target=video_playback_thread)
         thread.start()
         return jsonify({'success': True})
     except Exception as e:
         logger.error("Error playing video: %s", str(e))
         return jsonify({'error': 'Error playing video.'}), 500
-    finally:
-        os.close(temp_fd)
-
-@app.before_request
-def before_request():
-    logger.info("Before request -- Stopping video playback")
-    if request.method != 'POST':
-        return
-    if (playback_control["playing"]):
-        playback_control["playing"] = False
-        time.sleep(1/UPDATES_PER_SECOND)
-
 
 @app.after_request
 def after_request(response):
-    logger.info("After request -- Saving matrix state to file")
-    MATRIX.save_to_file()
-    logger.info("After request -- Matrix state saved to file")
+    if request.endpoint not in ['get_saved_matrices']:
+        logger.info("After request -- Saving matrix state to file")
+        MATRIX.save_to_file()
+        logger.info("After request -- Matrix state saved to file")
     return response
 
 if __name__ == '__main__':
@@ -385,10 +474,15 @@ if __name__ == '__main__':
     last_state = load_state()
     if last_state:
         if last_state['type'] == 'video':
-            # Play the video
-            playback_control["playing"] = True
-            thread = Thread(target=video_playback_thread, args=(last_state['filename'],))
-            thread.start()
+            video_path = last_state.get('filename')
+            if os.path.exists(video_path):
+                # Play the video
+                playback_control["playing"] = True
+                temp_filename = video_path  # Update the global variable
+                thread = Thread(target=video_playback_thread)
+                thread.start()
+            else:
+                logger.error("Video file not found at startup: %s", video_path)
         elif last_state['type'] == 'image':
             # Display the image
             MATRIX.update_from_matrix_array(last_state['content'])

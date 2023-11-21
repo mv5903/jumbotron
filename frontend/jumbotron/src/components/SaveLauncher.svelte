@@ -36,22 +36,24 @@
     {#if !currentPreviewURL}
     <h3 class="font-bold text-lg">Previous Items</h3>
     <p class="py-4">Choose an item to activate:</p>
-    <div class="grid grid-cols-2 gap-4">
-        {#each savedMatrixes as matrix}
-        <button class="flex place-items-center justify-between bg-base-300 btn-full" on:click={e => showPreviewHandler(e, matrix.filename)}>
-            <p>{matrix.filename.split('.')[0]}</p>
-            <button class="h-[40px] bg-red-600"  on:click={async (e) => {
-                e.stopPropagation(); // This will prevent event bubbling
-                if (!confirm('Are you sure you want to delete this?')) return;
-                await jumbotronInstance.deleteSavedItem(matrix.filename);
-            }}>
-                <FaTrash />
-            </button>
-        </button>
-        
-           
-            
-        {/each}
+    <div class="grid grid-cols-2 gap-4 text-center">
+        {#if savedMatrixes.length == 0}
+            <p class="py-4">No previous items found. Save something first!</p>
+        {/if}
+        {#if savedMatrixes.length > 0}
+            {#each savedMatrixes as matrix}
+                <button class="flex place-items-center justify-between bg-base-300 btn-full" on:click={e => showPreviewHandler(e, matrix.filename)}>
+                    <p>{matrix.filename.split('.')[0]}</p>
+                    <button class="h-[40px] bg-red-600"  on:click={async (e) => {
+                        e.stopPropagation(); // This will prevent event bubbling
+                        if (!confirm('Are you sure you want to delete this?')) return;
+                        await jumbotronInstance.deleteSavedItem(matrix.filename);
+                    }}>
+                        <FaTrash />
+                    </button>
+                </button>
+            {/each}
+        {/if}
     </div>
     <div class="modal-action">
         <form method="dialog">

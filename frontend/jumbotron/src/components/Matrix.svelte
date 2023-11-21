@@ -132,12 +132,6 @@
         <div class="divider">OR</div>
         <div class="flex justify-around">
             <div>
-                <h2 class="text-error">Reset</h2>
-                <div>
-                    <button class="btn btn-outline btn-error mt-2" on:click={eraseAllHandler}>Reset</button>
-                </div>
-            </div>
-            <div>
                 <h2 class="text-warning">Save</h2>
                 <div>
                     <button class="btn btn-outline btn-warning mt-2" on:click={saveCurrentHandler}>Save</button>
