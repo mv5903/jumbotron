@@ -258,7 +258,7 @@ def get_saved_matrices():
         data.append({
             "filename": files[i],
             "image": f"/jumbotron/get_saved_matrix_image/{files[i]}",
-            "type": "video" if json.load(open(os.path.join(SAVES_DIR, files[i]), 'r'))['type'] == 'video' else 'image'
+            #"type": "video" if json.load(open(os.path.join(SAVES_DIR, files[i]), 'r'))['type'] == 'video' else 'image'
         })
 
     #logger.info("Saved matrices retrieved successfully")
