@@ -1,0 +1,7 @@
+**/venv/**
+**/__pycache__/**
+**/.vscode/**
+*.log
+*.log.*
+backend/*.json
+backend/saves/*
