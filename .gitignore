@@ -5,3 +5,4 @@
 *.log.*
 backend/*.json
 backend/saves/*
+._DS_Store
