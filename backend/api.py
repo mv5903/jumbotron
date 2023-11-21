@@ -257,7 +257,8 @@ def get_saved_matrices():
     for i in range(len(files)):
         data.append({
             "filename": files[i],
-            "image": f"/jumbotron/get_saved_matrix_image/{files[i]}"
+            "image": f"/jumbotron/get_saved_matrix_image/{files[i]}",
+            "type": "video" if json.load(open(os.path.join(SAVES_DIR, files[i]), 'r'))['type'] == 'video' else 'image'
         })
 
     #logger.info("Saved matrices retrieved successfully")
@@ -393,20 +394,19 @@ def get_saved_matrix_image(filename):
 def video_playback_thread():
     try:
         video = cv2.VideoCapture(temp_filename)
-        
+
         if not video.isOpened():
             logger.warning("Could not open video")
             return
 
         start_time = time.time()
         frames_processed = 0
-        
+
         while playback_control["playing"]:
             ret, frame = video.read()
             if not ret:
-                # Reset the video to the start
                 video.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                start_time = time.time()  # Reset the start time
+                start_time = time.time()
                 frames_processed = 0
                 continue
 
@@ -418,14 +418,21 @@ def video_playback_thread():
                 frames_processed += 1
                 continue
 
+            # Get the current brightness setting
+            current_brightness = MATRIX.getBrightness()
+
+            # Convert the frame to an image and adjust brightness
             image = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-            matrix_representation = convert_image_to_matrix(image)
+            matrix_representation = convert_image_to_matrix(image, current_brightness)
+
+            # Update the matrix with the new frame
             MATRIX.update_from_matrix_array(matrix_representation)
             frames_processed += 1
 
         video.release()
     except Exception as e:
         logger.error("Error in video playback thread: %s", str(e))
+
 
 @app.route('/jumbotron/playvideo/<int:brightness>', methods=['POST'])
 def play_video(brightness):

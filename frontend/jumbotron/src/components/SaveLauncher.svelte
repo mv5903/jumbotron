@@ -2,6 +2,8 @@
     import { onMount } from 'svelte';
     import { jumbotronInstance, Jumbotron } from '../classes/Jumbotron';
     import FaTrash from 'svelte-icons/fa/FaTrash.svelte';
+    import FaImage from 'svelte-icons/fa/FaImage.svelte';
+    import FaVideo from 'svelte-icons/fa/FaVideo.svelte';
 
     let jumbotronState: Jumbotron;
 
@@ -43,6 +45,15 @@
         {#if savedMatrixes.length > 0}
             {#each savedMatrixes as matrix}
                 <button class="flex place-items-center justify-between bg-base-300 btn-full" on:click={e => showPreviewHandler(e, matrix.filename)}>
+                    {#if matrix.type == 'image'}
+                    <div class="h-[20px]">
+                        <FaImage />
+                    </div>
+                    {:else if matrix.type == 'video'}
+                    <div class="h-[20px]">
+                        <FaVideo />
+                    </div>
+                    {/if}
                     <p>{matrix.filename.split('.')[0]}</p>
                     <button class="h-[40px] bg-red-600"  on:click={async (e) => {
                         e.stopPropagation(); // This will prevent event bubbling
