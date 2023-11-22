@@ -78,6 +78,7 @@ export class Jumbotron {
             port: 5000,
             isInitialized: false,
         } as Jumbotron);
+        this.socket.disconnect();
     }
 
     async setupPixels() {
