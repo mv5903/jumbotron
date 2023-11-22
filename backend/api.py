@@ -478,6 +478,7 @@ if __name__ == '__main__':
     logger.info("Creating matrix of pixels %d x %d on pin %d", ROWS, COLUMNS, PIN)
     MATRIX = Jumbotron(ROWS, COLUMNS, PIN)
     logger.info("Matrix created successfully")
+    logger.info("Loading last state")
     last_state = load_state()
     if last_state:
         if last_state['type'] == 'video':
@@ -493,6 +494,7 @@ if __name__ == '__main__':
         elif last_state['type'] == 'image':
             # Display the image
             MATRIX.update_from_matrix_array(last_state['content'])
+    logger.info("Last state loaded successfully")
     logger.info("Starting Jumbotron API")
     socketio.run(app, host='0.0.0.0', port=5000)
     logger.info("Jumbotron API started successfully")
