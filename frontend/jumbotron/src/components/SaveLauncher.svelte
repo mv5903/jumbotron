@@ -55,12 +55,12 @@
                     </div>
                     {/if}
                     <p>{matrix.filename.split('.')[0]}</p>
-                    <button class="h-[40px] bg-red-600"  on:click={async (e) => {
+                    <button id="del" class="h-[40px] bg-red-600 w-[40px] flex justify-center"  on:click={async (e) => {
                         e.stopPropagation(); // This will prevent event bubbling
                         if (!confirm('Are you sure you want to delete this?')) return;
                         await jumbotronInstance.deleteSavedItem(matrix.filename);
                     }}>
-                        <FaTrash />
+                        X
                     </button>
                 </button>
             {/each}
@@ -86,5 +86,4 @@
 </div>
 
 <style>
-
 </style>

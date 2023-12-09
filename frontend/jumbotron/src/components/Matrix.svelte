@@ -9,6 +9,7 @@
     import FaEraser from 'svelte-icons/fa/FaEraser.svelte';
     import type { Pixel } from '../classes/Pixel';
     import SaveLauncher from './SaveLauncher.svelte';
+    import isMobileDevice from '../classes/IsMobile';
 
     let jumbotronState: Jumbotron;
 
@@ -94,18 +95,20 @@
 {:else if jumbotronState.isInitialized && Array.isArray(jumbotronState.pixels)}
     <div class="absolute card m-4 left-0 top-[14vh] bg-base-300" >
         <h2 class="text-2xl">Edit Jumbotron</h2>
-        <h2>Edit Directly</h2>
-        <div class="join join-horizontal mt-4 text-sm shadow-md">
-            <button class={`btn tooltip join-item ${editMode == EditMode.PIXEL && 'btn-primary'}`} data-tip="Pencil" on:click={() => editMode = EditMode.PIXEL} style="borderRadius: 'revert'"><FaPencilAlt /></button>
-            <button class={`btn tooltip join-item ${editMode == EditMode.ROW && 'btn-primary'}`} data-tip="Row" on:click={() => editMode = EditMode.ROW} style="borderRadius: 'revert'"><FaArrowsAltH /></button>
-            <button class={`btn tooltip join-item ${editMode == EditMode.COLUMN && 'btn-primary'}`} data-tip="Column" on:click={() => editMode = EditMode.COLUMN} style="borderRadius: 'revert'"><FaArrowsAltV /></button>
-            <button class={`btn tooltip join-item ${editMode == EditMode.ALL && 'btn-primary'}`} data-tip="All" on:click={() => editMode = EditMode.ALL} style="borderRadius: 'revert'"><FaBorderAll /></button>
-            <button class={`btn tooltip join-item ${editMode == EditMode.ERASER && 'btn-primary'}`} data-tip="Erase" on:click={() => editMode = EditMode.ERASER} style="borderRadius: 'revert'"><FaEraser /></button>
-        </div>
-        <div class="flex justify-between mt-8">
-            <h2>Color</h2>
-            <input type="color" bind:value={color}  />
-        </div>
+        {#if !isMobileDevice()}
+            <h2>Edit Directly</h2>
+            <div class="join join-horizontal mt-4 text-sm shadow-md">
+                <button class={`btn tooltip join-item ${editMode == EditMode.PIXEL && 'btn-primary'}`} data-tip="Pencil" on:click={() => editMode = EditMode.PIXEL} style="borderRadius: 'revert'"><FaPencilAlt /></button>
+                <button class={`btn tooltip join-item ${editMode == EditMode.ROW && 'btn-primary'}`} data-tip="Row" on:click={() => editMode = EditMode.ROW} style="borderRadius: 'revert'"><FaArrowsAltH /></button>
+                <button class={`btn tooltip join-item ${editMode == EditMode.COLUMN && 'btn-primary'}`} data-tip="Column" on:click={() => editMode = EditMode.COLUMN} style="borderRadius: 'revert'"><FaArrowsAltV /></button>
+                <button class={`btn tooltip join-item ${editMode == EditMode.ALL && 'btn-primary'}`} data-tip="All" on:click={() => editMode = EditMode.ALL} style="borderRadius: 'revert'"><FaBorderAll /></button>
+                <button class={`btn tooltip join-item ${editMode == EditMode.ERASER && 'btn-primary'}`} data-tip="Erase" on:click={() => editMode = EditMode.ERASER} style="borderRadius: 'revert'"><FaEraser /></button>
+            </div>
+            <div class="flex justify-between mt-8">
+                <h2>Color</h2>
+                <input type="color" bind:value={color}  />
+            </div>
+        {/if}
         <div class="flex justify-between mt-2">
             <h2>Brightness</h2>
             <div class="flex">
@@ -126,7 +129,7 @@
                     class="file-input file-input-bordered file-input-xs w-full max-w-xs text-sm my-3"
                     on:change={onFileChange}
                 />
-                <button class="btn btn-outline btn-info" on:click={handleFileUpload}>Send</button>
+                <button class="btn btn-info" on:click={handleFileUpload}>Send</button>
             </div>
         </div>
         <div class="divider">OR</div>
@@ -134,13 +137,13 @@
             <div>
                 <h2 class="text-warning">Save</h2>
                 <div>
-                    <button class="btn btn-outline btn-warning mt-2" on:click={saveCurrentHandler}>Save</button>
+                    <button class="btn btn-warning mt-2" on:click={saveCurrentHandler}>Save</button>
                 </div>
             </div>
             <div>
                 <h2 class="text-success">Previous</h2>
                 <div>
-                    <button class="btn btn-outline btn-success mt-2" on:click={saveLauncherHandler}>View Previous</button>
+                    <button class="btn btn-success mt-2" on:click={saveLauncherHandler}>View Previous</button>
                     <dialog id="saveLauncher" class="modal modal-bottom sm:modal-middle">
                         <SaveLauncher />
                     </dialog>
@@ -148,6 +151,7 @@
             </div>
         </div>
     </div>
+    {#if !isMobileDevice()}
     <div class="grid gap-1 w-[60vw] ms-72" style={`grid-template-columns: repeat(${jumbotronState.columns}, minmax(0, 1fr)); grid-template-rows: repeat(${jumbotronState.rows}, minmax(0, 1fr));`}>
         {#each jumbotronState.pixels as row, rowIndex}
             {#each row as pixel, columnIndex}
@@ -175,7 +179,7 @@
         </div>
         {/if}
     </div>
-    
+    {/if}
 {/if}
 
 <style>

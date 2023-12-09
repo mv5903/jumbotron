@@ -47,8 +47,7 @@
         <p>/jumbotron</p>
       </div>
       <div class="flex flex-col gap-3">
-        <button on:click={attemptCurrentConnection}>Connect with Desktop View</button>
-        <button on:click={attemptCurrentConnection}>Connect with Tablet View</button>
+        <button on:click={attemptCurrentConnection}>Connect to Jumbotron</button>
       </div>
       <p class="text-gray-300 text-opacity-25">
         You can also press <kbd class="kbd kbd-sm">Enter</kbd>!
