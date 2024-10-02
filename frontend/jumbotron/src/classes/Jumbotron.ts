@@ -1,7 +1,7 @@
 // Jumbotron.ts
 import { writable, get } from 'svelte/store';
 import { Pixel } from './Pixel';
-import io from 'socket.io-client';
+import { io } from 'socket.io-client';
 export class Jumbotron {
     rows: number = 0;
     columns: number = 0;
