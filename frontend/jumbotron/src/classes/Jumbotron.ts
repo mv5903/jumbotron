@@ -95,21 +95,30 @@ export class Jumbotron {
     async updatePixels() {
         let data = get(this._state);
         this.socket = io(`http://${data.hostname}:${data.port}/jumbotron`, { reconnectionAttempts: 5 });
-
+    
         this.socket.on('array_update', (response: { data: Pixel[][], timestamp: number }) => {
             this.updatesCounter++;
             // Fill in the row and column values for each pixel for easier access in other methods later
-            response.data.forEach((row, rowIndex) => row.forEach((pixel, columnIndex) => Object.assign(pixel, { row: rowIndex, column: columnIndex })));
-            this.latency = Math.abs((Date.now() - (response.timestamp / 1000000)));
-            this.pixels = response.data;
+            response.data.forEach((row, rowIndex) => row.forEach((pixel, columnIndex) => {
+                Object.assign(pixel, { row: rowIndex, column: columnIndex });
+            }));
+    
+            let newLatency = Math.abs((Date.now() - (response.timestamp / 1000000)));
+            let newPixels = response.data;
+    
             let old = get(this._state);
-            this._state.set({
-                ...old,
-                pixels: this.pixels, 
-                latency: this.latency 
-            } as Jumbotron);
+    
+            // Check if the new data or latency is different from the old state before setting it
+            if (JSON.stringify(old.pixels) !== JSON.stringify(newPixels) || old.latency !== newLatency) {
+                this._state.set({
+                    ...old,
+                    pixels: newPixels,
+                    latency: newLatency
+                } as Jumbotron);
+            }
         });
     }
+    
 
     async updateBrightness(brightness: number) {
         let data = get(this._state);
@@ -151,35 +160,53 @@ export class Jumbotron {
         fetch(`http://${data.hostname}:${data.port}/jumbotron/pixel/${pixel.row}/${pixel.column}/${r}/${g}/${b}/${pixel.brightness}`);
     }
 
-    async uploadImage(file: any, brightness: number) {
+    async uploadImage(file: any, brightness: number, progressCallback: (progress: number) => void) {
         if (!file) return;
         let data = get(this._state);
-
+    
         const formData = new FormData();
         formData.append("file", file);
-
-        // Check if file is video or image
+    
+        // Create a new XMLHttpRequest object
+        const xhr = new XMLHttpRequest();
+    
+        // Add an event listener to track progress and pass the progress outside
+        xhr.upload.addEventListener("progress", (event) => {
+            if (event.lengthComputable) {
+                const percentComplete = (event.loaded / event.total) * 100;
+                // Call the provided callback with the progress value
+                progressCallback(percentComplete);
+            }
+        });
+    
+        // Handle upload complete or error
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === XMLHttpRequest.DONE) {
+                if (xhr.status === 200) {
+                    console.log("Upload complete!");
+                    // Call the progress callback with 100% when done
+                    progressCallback(100);
+                } else {
+                    console.error("Error uploading file:", xhr.responseText);
+                    // Handle error, you can also notify the callback if needed
+                }
+            }
+        };
+    
+        // Determine the correct URL based on the file type
         const isVideo = file.type.startsWith("video");
-        if (isVideo) {
-            try {
-                await fetch(`http://${data.hostname}:${data.port}/jumbotron/playvideo/${brightness}`, {
-                    method: "POST",
-                    body: formData
-                })
-            } catch (error) {
-                console.error("Error uploading video:", error);
-            }
-        } else {
-            try {
-                await fetch(`http://${data.hostname}:${data.port}/jumbotron/upload/${brightness}`, {
-                    method: "POST",
-                    body: formData
-                });
-            } catch (error) {
-                console.error("Error uploading image:", error);
-            }
-        }
-    };
+        const url = isVideo
+            ? `http://${data.hostname}:${data.port}/jumbotron/playvideo/${brightness}`
+            : `http://${data.hostname}:${data.port}/jumbotron/upload/${brightness}`;
+    
+        // Open the connection
+        xhr.open("POST", url);
+    
+        // Send the form data
+        xhr.send(formData);
+    }
+    
+    
 
     async getSavedItems() {
         let data = get(this._state);

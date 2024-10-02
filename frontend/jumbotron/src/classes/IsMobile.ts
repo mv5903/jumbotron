@@ -11,7 +11,7 @@ export default function isMobileDevice(): boolean {
         return true;
     }
 
-    if (window.innerWidth < 800) {
+    if (window.innerWidth < 1280) {
         return true;
     }
 

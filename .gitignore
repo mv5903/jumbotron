@@ -6,3 +6,4 @@
 backend/*.json
 backend/saves/*
 ._DS_Store
+**/node-modules/**

@@ -62,16 +62,23 @@
         }
     }
 
+    let uploadingProgress = 100;
+
     function handleFileUpload() {
         if (!file) return;
-        jumbotronInstance.uploadImage(file, brightness);
+        const handleUploadProgress = (progress: number) => {
+            uploadingProgress = progress;
+        };
+        jumbotronInstance.uploadImage(file, brightness, handleUploadProgress);
     }
 
-    function saveLauncherHandler() {
+    let savedMatrixes: any[] = [];
+
+    async function saveLauncherHandler() {
         const saveLauncher = document.getElementById('saveLauncher');
         if (saveLauncher) {
             try {
-                // Typescript being typescript :)
+                savedMatrixes = await jumbotronInstance.getSavedItems();
                 (saveLauncher as unknown as SaveLauncher).showModal();
             } catch (e) {
                 console.error(e);
@@ -88,98 +95,120 @@
             alert('Failed to save!');
         }
     }
+
+    let isMobile = isMobileDevice();
+
+    // To update isMobile reactively
+    onMount(() => {
+        const handleResize = () => {
+            isMobile = isMobileDevice();
+        };
+        window.addEventListener('resize', handleResize);
+        
+        // Clean up the event listener when component is destroyed
+        return () => window.removeEventListener('resize', handleResize);
+    });
 </script>
 
 {#if !jumbotronState.isInitialized}
-    <p>Loading...</p>
+<p>Loading...</p>
 {:else if jumbotronState.isInitialized && Array.isArray(jumbotronState.pixels)}
-    <div class="absolute card m-4 left-0 top-[14vh] bg-base-300" >
-        <h2 class="text-2xl">Edit Jumbotron</h2>
-        {#if !isMobileDevice()}
-            <h2>Edit Directly</h2>
-            <div class="join join-horizontal mt-4 text-sm shadow-md">
-                <button class={`btn tooltip join-item ${editMode == EditMode.PIXEL && 'btn-primary'}`} data-tip="Pencil" on:click={() => editMode = EditMode.PIXEL} style="borderRadius: 'revert'"><FaPencilAlt /></button>
-                <button class={`btn tooltip join-item ${editMode == EditMode.ROW && 'btn-primary'}`} data-tip="Row" on:click={() => editMode = EditMode.ROW} style="borderRadius: 'revert'"><FaArrowsAltH /></button>
-                <button class={`btn tooltip join-item ${editMode == EditMode.COLUMN && 'btn-primary'}`} data-tip="Column" on:click={() => editMode = EditMode.COLUMN} style="borderRadius: 'revert'"><FaArrowsAltV /></button>
-                <button class={`btn tooltip join-item ${editMode == EditMode.ALL && 'btn-primary'}`} data-tip="All" on:click={() => editMode = EditMode.ALL} style="borderRadius: 'revert'"><FaBorderAll /></button>
-                <button class={`btn tooltip join-item ${editMode == EditMode.ERASER && 'btn-primary'}`} data-tip="Erase" on:click={() => editMode = EditMode.ERASER} style="borderRadius: 'revert'"><FaEraser /></button>
+    <div class="flex justify-between gap-16">
+        <div class="card m-4 left-0 bg-base-300" >
+            <h2 class="text-2xl">Edit Jumbotron</h2>
+            {#if !isMobileDevice()}
+                <h2>Edit Directly</h2>
+                <div class="join join-horizontal mt-4 text-sm shadow-md">
+                    <button class={`btn tooltip join-item ${editMode == EditMode.PIXEL && 'btn-primary'}`} data-tip="Pencil" on:click={() => editMode = EditMode.PIXEL} style="borderRadius: 'revert'"><FaPencilAlt /></button>
+                    <button class={`btn tooltip join-item ${editMode == EditMode.ROW && 'btn-primary'}`} data-tip="Row" on:click={() => editMode = EditMode.ROW} style="borderRadius: 'revert'"><FaArrowsAltH /></button>
+                    <button class={`btn tooltip join-item ${editMode == EditMode.COLUMN && 'btn-primary'}`} data-tip="Column" on:click={() => editMode = EditMode.COLUMN} style="borderRadius: 'revert'"><FaArrowsAltV /></button>
+                    <button class={`btn tooltip join-item ${editMode == EditMode.ALL && 'btn-primary'}`} data-tip="All" on:click={() => editMode = EditMode.ALL} style="borderRadius: 'revert'"><FaBorderAll /></button>
+                    <button class={`btn tooltip join-item ${editMode == EditMode.ERASER && 'btn-primary'}`} data-tip="Erase" on:click={() => editMode = EditMode.ERASER} style="borderRadius: 'revert'"><FaEraser /></button>
+                </div>
+                <div class="flex justify-between mt-8">
+                    <h2>Color</h2>
+                    <input type="color" bind:value={color}  />
+                </div>
+            {/if}
+            <div class="flex justify-between mt-2">
+                <h2>Brightness</h2>
+                <div class="flex">
+                    <p>0</p>
+                    <div class="tooltip" data-tip={brightness}>
+                        <input type="range" min={0} max="40" bind:value={brightness} on:change={e => jumbotronInstance.updateBrightness(brightness)} class="range w-32 mx-2" />
+                    </div>
+                    <p>40</p>
+                </div>
+            </div> 
+            <div class="divider">OR</div>
+            <div class="my-4">
+                <h2>Upload Image/Video</h2>
+                <div class="flex flex-col gap-2 justify-center place-items-center">
+                    <input 
+                        type="file" 
+                        accept="image/*, video/*"
+                        class="file-input file-input-bordered file-input-xs w-full max-w-xs text-sm my-3"
+                        on:change={onFileChange}
+                    />
+                    {#if uploadingProgress < 100}
+                        <div class="radial-progress" style={`--value:${uploadingProgress}; --size: 2rem;`} role="progressbar"></div>
+                    {:else}
+                        <button class="btn btn-info" on:click={handleFileUpload}>Send</button>
+                    {/if}
+                </div>
             </div>
-            <div class="flex justify-between mt-8">
-                <h2>Color</h2>
-                <input type="color" bind:value={color}  />
+            <div class="divider">OR</div>
+            <div class="flex justify-around">
+                <div>
+                    <h2 class="text-warning">Save</h2>
+                    <div>
+                        <button class="btn btn-warning mt-2" on:click={saveCurrentHandler}>Save</button>
+                    </div>
+                </div>
+                <div>
+                    <h2 class="text-success">Previous</h2>
+                    <div>
+                        <button class="btn btn-success mt-2" on:click={saveLauncherHandler}>View Previous</button>
+                        <dialog id="saveLauncher" class="modal modal-bottom sm:modal-middle">
+                            <SaveLauncher savedMatrixes={savedMatrixes} />
+                        </dialog>
+                    </div>
+                </div>
             </div>
+        </div>
+        {#if !isMobile}
+        <div class="card bg-base-300 flex flex-col gap-4">
+            <h2 class="text-2xl">Live View</h2>
+            <div class="grid gap-1" style={`grid-template-columns: repeat(${jumbotronState.columns}, minmax(0, 1fr)); grid-template-rows: repeat(${jumbotronState.rows}, minmax(0, 1fr));`}>
+                {#each jumbotronState.pixels as row, rowIndex}
+                    {#each row as pixel, columnIndex}
+                    <div class="tooltip tooltip-top" data-tip={pixel.brightness}>
+                        <div class="w-2 h-2 border-red-500" on:click={e => processToolInput(pixel, e)} on:keydown={e => processToolInput(pixel, e)} role="button" tabindex={rowIndex * columnIndex} style={`background-color: rgb(${pixel.r}, ${pixel.g}, ${pixel.b}); opacity: ${pixel.brightness / 40}`}></div>
+                    </div>
+                    {/each}
+                {/each}
+            </div>
+        </div>
         {/if}
-        <div class="flex justify-between mt-2">
-            <h2>Brightness</h2>
-            <div class="flex">
-                <p>0</p>
-                <div class="tooltip" data-tip={brightness}>
-                    <input type="range" min={0} max="40" bind:value={brightness} on:change={e => jumbotronInstance.updateBrightness(brightness)} class="range w-32 mx-2" />
-                </div>
-                <p>40</p>
-            </div>
-        </div> 
-        <div class="divider">OR</div>
-        <div class="my-4">
-            <h2>Upload Image/Video</h2>
-            <div class="flex flex-col gap-2 justify-center place-items-center">
-                <input 
-                    type="file" 
-                    accept="image/*, video/*"
-                    class="file-input file-input-bordered file-input-xs w-full max-w-xs text-sm my-3"
-                    on:change={onFileChange}
-                />
-                <button class="btn btn-info" on:click={handleFileUpload}>Send</button>
-            </div>
-        </div>
-        <div class="divider">OR</div>
-        <div class="flex justify-around">
-            <div>
-                <h2 class="text-warning">Save</h2>
-                <div>
-                    <button class="btn btn-warning mt-2" on:click={saveCurrentHandler}>Save</button>
-                </div>
-            </div>
-            <div>
-                <h2 class="text-success">Previous</h2>
-                <div>
-                    <button class="btn btn-success mt-2" on:click={saveLauncherHandler}>View Previous</button>
-                    <dialog id="saveLauncher" class="modal modal-bottom sm:modal-middle">
-                        <SaveLauncher />
-                    </dialog>
-                </div>
-            </div>
-        </div>
     </div>
-    {#if !isMobileDevice()}
-    <div class="grid gap-1 w-[60vw] ms-72" style={`grid-template-columns: repeat(${jumbotronState.columns}, minmax(0, 1fr)); grid-template-rows: repeat(${jumbotronState.rows}, minmax(0, 1fr));`}>
-        {#each jumbotronState.pixels as row, rowIndex}
-            {#each row as pixel, columnIndex}
-            <div class="tooltip tooltip-top" data-tip={pixel.brightness}>
-                <div class="w-2 h-2 border-red-500" on:click={e => processToolInput(pixel, e)} on:keydown={e => processToolInput(pixel, e)} role="button" tabindex={rowIndex * columnIndex} style={`background-color: rgb(${pixel.r}, ${pixel.g}, ${pixel.b}); opacity: ${pixel.brightness / 40}`}></div>
-            </div>
-            {/each}
-        {/each}
-    </div>
-    <div class="absolute top-2 left-[65vw] h-[6vh] flex gap-4 place-items-center">
+    <div class="absolute top-24 card bg-base-300">
         <div class="flex gap-2">
             <p>Debug Info</p>
             <input type="checkbox" class="toggle" bind:checked={showDebug} />
         </div>
         {#if showDebug}
-        <div>
-            <div class="flex gap-2">
-                <p>Latency: </p>
-                <p>{jumbotronState.latency.toFixed(0)}ms</p>
+            <div>
+                <div class="flex gap-2">
+                    <p>Latency: </p>
+                    <p>{jumbotronState.latency.toFixed(0)}ms</p>
+                </div>
+                <div class="flex gap-2">
+                    <p>FPS: </p>
+                    <p>{jumbotronState.fps}</p>
+                </div>
             </div>
-            <div class="flex gap-2">
-                <p>FPS: </p>
-                <p>{jumbotronState.fps}</p>
-            </div>
-        </div>
         {/if}
     </div>
-    {/if}
 {/if}
 
 <style>

@@ -1,8 +1,6 @@
 import json
 import os
-import shutil
-import tempfile
-from flask import Flask, make_response, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 from flask_socketio import SocketIO
 from threading import Event
@@ -50,7 +48,7 @@ COLUMNS = 64
 
 MATRIX = None
 
-UPDATES_PER_SECOND = 30;
+UPDATES_PER_SECOND = 60;
 
 SAVES_DIR = "saves"
 
@@ -106,7 +104,7 @@ def jumbotron_updater():
     while not thread_stop_event.is_set():
         if (MATRIX is not None):
             socketio.emit('array_update', {'data': MATRIX.get2DArrayRepresentation(), 'timestamp' : time.time_ns() }, namespace='/jumbotron')
-            time.sleep(1/UPDATES_PER_SECOND)  # approximately 60 times per second
+            time.sleep(1/UPDATES_PER_SECOND) 
 
 @socketio.on('connect', namespace='/jumbotron')
 def handle_connect(*args):

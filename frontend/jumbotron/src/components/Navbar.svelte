@@ -16,13 +16,13 @@
     {#if jumbotronState}
         <div class="navbar bg-base-100">
             <div class="navbar-start">
-                <p>{jumbotronState.rows} Rows X {jumbotronState.columns} Columns</p>
+                <h2>{jumbotronState.rows} Rows X {jumbotronState.columns} Columns</h2>
             </div>
             <div class="navbar-center flex">
-                <h2>{jumbotronState.hostname}:{jumbotronState.port}</h2>
+                <h2 class="font-bold text-3xl">{jumbotronState.hostname}:{jumbotronState.port}</h2>
             </div>
             <div class="navbar-end">
-                <button on:click={disconnect}>Disconnect</button>
+                <button class="bg-red-800" on:click={disconnect}>Disconnect</button>
             </div>
         </div>
     {/if}

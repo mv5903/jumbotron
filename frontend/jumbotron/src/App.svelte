@@ -15,10 +15,23 @@
   let hostname = "";
   let port = 5000;
 
+  let loading = false;
+
   async function attemptCurrentConnection() {
+    loading = true;
+
+    // Validate Input
+    if (!hostname || !port) {
+      alert("Please enter a valid hostname and port.");
+      loading = false;
+      return;
+    }
+
+    // Attempt Connection
     if (await jumbotronInstance.attemptConnection(hostname, port)) {
       connections.addConnection({ hostname, port });
     }
+    loading = false;
   }
 
   async function attemptSelectiveConnection(connection: Connection) {
@@ -46,8 +59,12 @@
         <input type="number" bind:value={port} on:keydown={e => e.key == 'Enter' && attemptCurrentConnection()} class="input input-bordered w-full max-w-xs" placeholder="Port" />
         <p>/jumbotron</p>
       </div>
-      <div class="flex flex-col gap-3">
-        <button on:click={attemptCurrentConnection}>Connect to Jumbotron</button>
+      <div class="flex gap-3">
+        {#if loading}
+        <span class="loading loading-dots loading-md"></span>
+        {:else}
+          <button on:click={attemptCurrentConnection}>Connect to Jumbotron</button>
+        {/if}
       </div>
       <p class="text-gray-300 text-opacity-25">
         You can also press <kbd class="kbd kbd-sm">Enter</kbd>!
