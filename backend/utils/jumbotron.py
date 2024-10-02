@@ -14,13 +14,16 @@ def is_raspberry_pi_4():
 
 import json
 import platform
+from utils.config import Config
 
 # If we are running on a Raspberry Pi 4, import the real library, otherwise import the mock library 
 # The mock library is used for testing on non-Raspberry Pi 4 devices, like us developers
 if is_raspberry_pi_4():
     from rpi_ws281x import PixelStrip, Color
+    Config.LOGGER.info("Running on a Raspberry Pi 4 device. Using real library.")
 else:
-    from mock_rpi_ws281x import PixelStrip, Color
+    from utils.mock_rpi_ws281x import PixelStrip, Color
+    Config.LOGGER.warn("Running on a non-Raspberry Pi 4 device. Using mock library.")
 
 class Pixel:
     def __init__(self, r=0, g=0, b=0, brightness=100):
@@ -139,3 +142,21 @@ class Jumbotron:
     def save_to_file(self):
         with open(SAVEFILE, 'w') as f:
             f.write(json.dumps(self.get2DArrayRepresentation()))
+
+    # Static Methods
+    def convert_image_to_matrix(image, brightness=40):
+        # Resize image to match Jumbotron resolution
+        image = image.resize((Config.COLUMNS, Config.ROWS))
+        
+        # Convert image to RGB
+        image = image.convert("RGB")
+
+        matrix = []
+        for row in range(Config.ROWS):
+            matrix_row = []
+            for column in range(Config.COLUMNS):
+                r, g, b = image.getpixel((column, row))
+                matrix_row.append({'r': r, 'g': g, 'b': b, 'brightness': brightness})  # Assuming full brightness
+            matrix.append(matrix_row)
+
+        return matrix
