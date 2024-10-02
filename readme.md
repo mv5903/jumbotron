@@ -16,7 +16,7 @@ I want this matrix to be something that can be capable of nearly anything I thro
 
 You see most of it in this Repo, but to give a general overview:
 - Backend: Python Flask API with Socket.io
-- Frontend: Vite React.js with Typescript
+- Frontend: Vite Svelte with Typescript (with a lot of components updating very frequently, a framework that uses a virtual DOM like React was not going to cut it.)
 
 The `api.py` file is registered as a systemd service and runs at startup; it is always running when the Raspberry Pi is.
 
