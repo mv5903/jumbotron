@@ -281,6 +281,18 @@ def delete_saved_matrix(filename):
     filepath = os.path.join(SAVES_DIR, filename)
 
     if os.path.exists(filepath):
+        
+        # If the file is a video, delete the video file as well
+        with open(filepath, 'r') as file:
+            saved_content = json.load(file)
+            if saved_content['type'] == 'video':
+                video_path = saved_content['content']
+                if os.path.exists(video_path):
+                    os.remove(video_path)
+                    logger.info("Video file deleted successfully")
+                else:
+                    logger.warning("Video file does not exist")
+        
         os.remove(filepath)
         logger.info("Saved matrix deleted successfully")    
         return jsonify({"success": True})
@@ -317,6 +329,8 @@ def activate_saved_matrix(filename):
                 # Play the video
                 playback_control["playing"] = True
                 temp_filename = video_path  # Update the global variable
+                save_state({'type': 'video', 'filename': filename, 'brightness': 40})
+        
                 thread = Thread(target=video_playback_thread)
                 thread.start()
             else:
@@ -326,6 +340,8 @@ def activate_saved_matrix(filename):
         elif saved_content['type'] == 'image':
             # Display the image
             MATRIX.update_from_matrix_array(saved_content['content'])
+            playback_control["playing"] = False
+            save_state({'type': 'image', 'content': saved_content['content']})
 
         logger.info("Saved content activated successfully")
         return jsonify({"success": True})
@@ -480,7 +496,12 @@ if __name__ == '__main__':
     last_state = load_state()
     if last_state:
         if last_state['type'] == 'video':
-            video_path = last_state.get('filename')
+            video_path = SAVES_DIR + "/" + last_state.get('filename')
+            
+            # Retrieve the content
+            with open(video_path, 'r') as file:
+                video_path = json.load(file)['content']
+            
             if os.path.exists(video_path):
                 # Play the video
                 playback_control["playing"] = True
