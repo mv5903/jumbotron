@@ -9,4 +9,5 @@ class Config:
     SAVES_DIR = "saves"
     STATE_FILE = "last_state.json"
     LOGGER = create_logger()
-    PORT = 5000
+    HTTP_PORT = 5000
+    WS_PORT = 5001

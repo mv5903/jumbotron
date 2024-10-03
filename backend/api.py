@@ -1,6 +1,8 @@
 # pip imports
 import json
 import os
+import socketserver
+import subprocess
 import threading
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
@@ -10,19 +12,18 @@ import eventlet
 from PIL import Image
 from io import BytesIO
 import cv2
-from threading import Thread
+import websockets
 from werkzeug.utils import secure_filename
 from flask_sockets import Sockets
-from gevent import pywsgi
-from geventwebsocket.handler import WebSocketHandler
+import asyncio
 
 # local imports
 from utils.jumbotron import Jumbotron
 from utils.config import Config
+from utils.httpDecorator import CustomHTTPRequestHandler, route 
 
 try:
     # Setup
-    #eventlet.spawn()
     temp_filename = None
     thread_started = False
     thread_stop_event = Event()
@@ -31,6 +32,7 @@ try:
     CORS(app)
     sockets = Sockets(app)
     clients = set()
+    jumbotron_updater_thread = None
 
     # region Helper Methods
     def save_state(state):
@@ -52,20 +54,22 @@ try:
                 image.putpixel((column, row), (r, g, b))
         return image
 
-    def jumbotron_updater():
+    async def jumbotron_updater(websocket):
+        Config.LOGGER.info("Client connected")
         while not thread_stop_event.is_set():
             if (Config.MATRIX is not None):
-                for ws in clients.copy():
-                    try:
-                        message = json.dumps({
-                            'data': Config.MATRIX.get2DArrayRepresentation(),
-                            'timestamp': time.time_ns()
-                        })
-                        ws.send(message)
-                    except Exception as e:
-                        clients.remove(ws)  # Remove disconnected client
-                time.sleep(1/Config.UPDATES_PER_SECOND) 
-                
+                try:
+                    message = json.dumps({
+                        'data': Config.MATRIX.get2DArrayRepresentation(),
+                        'timestamp': time.time_ns()
+                    })
+                    await websocket.send(message)
+                except Exception as e:
+                    await websocket.close() 
+                    Config.LOGGER.info("Client disconnected")
+                    break
+                await asyncio.sleep(1/Config.UPDATES_PER_SECOND) 
+
     def video_playback_thread():
         try:
             video = cv2.VideoCapture(temp_filename)
@@ -109,34 +113,12 @@ try:
             Config.LOGGER.error("Error in video playback thread: %s", str(e))
             
     # endregion
-
-    # region API Endpoints
-    @sockets.route('/jumbotron')
-    def handle_jumbotron_socket(ws):
-        global thread_started
-        client_ip = request.remote_addr
-        print(f"Client connected from {client_ip}")
-
-        clients.add(ws)
         
-        # Start the updater thread once
-        if not thread_started:
-            threading.Thread(target=jumbotron_updater).start()
-            thread_started = True
-
-        while not ws.closed:
-            message = ws.receive()
-            if message:
-                print(f"Received message from {client_ip}: {message}")
-
-        clients.remove(ws)
-        print(f"Client disconnected from {client_ip}")
-        
-    @app.route('/')
+    @route('/')
     def hello():
         return 'Hello World!'
 
-    @app.route('/jumbotron', methods=['GET'])
+    @route('/jumbotron')
     def discover():
         Config.LOGGER.info("Client discovered Jumbotron API")
         return {
@@ -145,7 +127,7 @@ try:
             "columns": Config.COLUMNS,
         }
 
-    @app.route('/jumbotron/pixel/<int:row>/<int:column>/<int:r>/<int:g>/<int:b>/<int:brightness>')
+    @route('/jumbotron/pixel/<int:row>/<int:column>/<int:r>/<int:g>/<int:b>/<int:brightness>')
     def updatePixel(row, column, r, g, b, brightness):
         Config.LOGGER.info("Updating pixel at row: %d, column: %d to r: %d, g: %d, b: %d, brightness: %d", row, column, r, g, b, brightness)
         Config.MATRIX.updatePixel(row, column, r, g, b, brightness)
@@ -153,7 +135,7 @@ try:
             "success": True
         }
 
-    @app.route('/jumbotron/row/<int:row>/<int:r>/<int:g>/<int:b>/<int:brightness>')
+    @route('/jumbotron/row/<int:row>/<int:r>/<int:g>/<int:b>/<int:brightness>')
     def updateRow(row, r, g, b, brightness):
         Config.LOGGER.info("Updating row: %d to r: %d, g: %d, b: %d, brightness: %d", row, r, g, b, brightness)
         Config.MATRIX.updateRow(row, r, g, b, brightness)
@@ -161,7 +143,7 @@ try:
             "success": True
         }
 
-    @app.route('/jumbotron/column/<int:column>/<int:r>/<int:g>/<int:b>/<int:brightness>')
+    @route('/jumbotron/column/<int:column>/<int:r>/<int:g>/<int:b>/<int:brightness>')
     def updateColumn(column, r, g, b, brightness):
         Config.LOGGER.info("Updating column: %d to r: %d, g: %d, b: %d, brightness: %d", column, r, g, b, brightness)
         Config.MATRIX.updateColumn(column, r, g, b, brightness)
@@ -169,7 +151,7 @@ try:
             "success": True
         }
 
-    @app.route('/jumbotron/all/<int:r>/<int:g>/<int:b>/<int:brightness>')
+    @route('/jumbotron/all/<int:r>/<int:g>/<int:b>/<int:brightness>')
     def updateAll(r, g, b, brightness):
         Config.LOGGER.info("Updating all pixels to r: %d, g: %d, b: %d, brightness: %d", r, g, b, brightness)
         Config.MATRIX.updateAll(r, g, b, brightness)
@@ -177,7 +159,7 @@ try:
             "success": True
         }
 
-    @app.route('/jumbotron/reset')
+    @route('/jumbotron/reset')
     def reset():
         Config.LOGGER.info("Resetting all pixels to r: 0, g: 0, b: 0, brightness: 0")
         video_is_playing = False
@@ -188,7 +170,7 @@ try:
         }
 
 
-    @app.route('/jumbotron/upload/<int:brightness>', methods=['POST'])
+    @route('/jumbotron/upload/<int:brightness>', method='POST')
     def upload_image(brightness):
         Config.LOGGER.info("Uploading image")
         if 'file' not in request.files:
@@ -210,19 +192,19 @@ try:
             save_state({'type': 'image', 'content': matrix_representation})
             return jsonify(matrix_representation)
         
-    @app.route('/jumbotron/brightness/<int:brightness>', methods=['POST'])
+    @route('/jumbotron/brightness/<int:brightness>', method='POST')
     def brightness(brightness):
         Config.LOGGER.info("Updating brightness to %d", brightness)
         Config.MATRIX.updateBrightness(brightness)
         return jsonify({"success": True})
 
-    @app.route('/jumbotron/brightness')
+    @route('/jumbotron/brightness')
     def get_brightness():
         Config.LOGGER.info("Getting brightness")
         brightness = Config.MATRIX.getBrightness()
-        return jsonify({"brightness": brightness})
+        return {"brightness": brightness}
 
-    @app.route('/jumbotron/save_current_matrix/<string:matrixname>', methods=['POST'])
+    @route('/jumbotron/save_current_matrix/<string:matrixname>', method='POST')
     def save_current_matrix(matrixname):
         Config.LOGGER.info("Saving current content to file: %s", matrixname)
         # Ensure the "saves" directory exists
@@ -261,7 +243,7 @@ try:
 
 
 
-    @app.route('/jumbotron/get_saved_matrices')
+    @route('/jumbotron/get_saved_matrices')
     def get_saved_matrices():
         Config.LOGGER.info("Getting saved matrices")
         if not os.path.exists(Config.SAVES_DIR):
@@ -280,7 +262,7 @@ try:
         Config.LOGGER.info("Saved matrices retrieved successfully")
         return jsonify(data)
 
-    @app.route('/jumbotron/play_saved_matrix/<string:filename>')
+    @route('/jumbotron/play_saved_matrix/<string:filename>')
     def play_saved_matrix(filename):
         Config.LOGGER.info("Playing saved matrix: %s", filename)
         filepath = os.path.join(Config.SAVES_DIR, filename)
@@ -293,7 +275,7 @@ try:
         Config.LOGGER.info("Saved matrix played successfully")
         return jsonify({"success": True})
 
-    @app.route('/jumbotron/delete_saved_matrix/<string:filename>', methods=['DELETE'])
+    @route('/jumbotron/delete_saved_matrix/<string:filename>', method='DELETE')
     def delete_saved_matrix(filename):
         Config.LOGGER.info("Deleting saved matrix: %s", filename)
         filepath = os.path.join(Config.SAVES_DIR, filename)
@@ -318,7 +300,7 @@ try:
             Config.LOGGER.warning("File does not exist")
             return jsonify({"success": False, "error": "File does not exist."})
         
-    @app.route('/jumbotron/activate_saved_matrix/<string:filename>', methods=['POST'])
+    @route('/jumbotron/activate_saved_matrix/<string:filename>', method='POST')
     def activate_saved_matrix(filename):
         global temp_filename  # If handling video, update the global video filename
 
@@ -349,8 +331,7 @@ try:
                     temp_filename = video_path  # Update the global variable
                     save_state({'type': 'video', 'filename': filename, 'brightness': 40})
             
-                    thread = Thread(target=video_playback_thread)
-                    thread.start()
+                    eventlet.spawn(video_playback_thread) 
                 else:
                     Config.LOGGER.error("Video file not found: %s", video_path)
                     return jsonify({"success": False, "error": "Video file not found."}), 404
@@ -375,7 +356,7 @@ try:
             return jsonify({"success": False, "error": str(e)}), 500
 
         
-    @app.route('/jumbotron/get_saved_matrix_image/<string:filename>')
+    @route('/jumbotron/get_saved_matrix_image/<string:filename>')
     def get_saved_matrix_image(filename):
         Config.LOGGER.info("Getting preview for saved content: %s", filename)
         filepath = os.path.join(Config.SAVES_DIR, filename)
@@ -422,7 +403,7 @@ try:
             Config.LOGGER.error("Error getting saved content image: %s", str(e))
             return jsonify({"success": False, "error": str(e)}), 500
 
-    @app.route('/jumbotron/playvideo/<int:brightness>', methods=['POST'])
+    @route('/jumbotron/playvideo/<int:brightness>', method='POST')
     def play_video(brightness):
         global temp_filename  # Keep track of the current video file name
 
@@ -446,27 +427,28 @@ try:
         try:
             video_is_playing = True
             save_state({'type': 'video', 'filename': permanent_file_path, 'brightness': brightness})
-            thread = Thread(target=video_playback_thread)
-            thread.start()
+            eventlet.spawn(video_playback_thread)
             return jsonify({'success': True})
         except Exception as e:
             Config.LOGGER.error("Error playing video: %s", str(e))
             return jsonify({'error': 'Error playing video.'}), 500
         
     # endregion
-
-    # region Specials
-    @app.after_request
-    def after_request(response):
-        if request.endpoint not in ['get_saved_matrices']:
-            Config.LOGGER.info("After request -- Saving matrix state to file")
-            Config.MATRIX.save_to_file()
-            Config.LOGGER.info("After request -- Matrix state saved to file")
-        return response
-
-    # endregion
-
-    if __name__ == '__main__':
+    
+    # HTTP server thread
+    def run_http_server():
+        Handler = CustomHTTPRequestHandler
+        
+        # Kill old server if it exists
+        old_server = subprocess.run(["lsof", "-t", "-i:5000"], stdout=subprocess.PIPE)
+        if old_server.stdout:
+            subprocess.run(["kill", "-9", old_server.stdout])
+        
+        with socketserver.TCPServer(("", Config.HTTP_PORT), Handler) as httpd:
+            Config.LOGGER.info(f"Serving HTTP on port {Config.HTTP_PORT}")
+            httpd.serve_forever()
+    
+    async def main():
         # Create empty matrix of pixels
         Config.LOGGER.info("Creating matrix of pixels %d x %d on GPIO PIN %d", Config.ROWS, Config.COLUMNS, Config.PIN)
         Config.MATRIX = Jumbotron(Config.ROWS, Config.COLUMNS, Config.PIN)
@@ -485,8 +467,7 @@ try:
                     # Play the video
                     video_is_playing = True
                     temp_filename = video_path  # Update the global variable
-                    thread = Thread(target=video_playback_thread)
-                    thread.start()
+                    eventlet.spawn(video_playback_thread)
                 else:
                     Config.LOGGER.error("Video file not found at startup: %s", video_path)
             elif last_state['type'] == 'image':
@@ -494,15 +475,31 @@ try:
                 Config.MATRIX.update_from_matrix_array(last_state['content'])
         Config.LOGGER.info("Last state loaded successfully")
         Config.LOGGER.info("Starting Jumbotron API")
-        server = pywsgi.WSGIServer(('0.0.0.0', Config.PORT), app, handler_class=WebSocketHandler)
         Config.LOGGER.info("Jumbotron API started successfully")
-        server.serve_forever()
+        async with websockets.serve(jumbotron_updater, "localhost", Config.WS_PORT):
+            Config.LOGGER.info(f"WebSocket server started on ws://localhost:{Config.WS_PORT}")
+            await asyncio.Future() 
 
+            
 except KeyboardInterrupt as e:
     Config.LOGGER.info("Keyboard interrupt received")
     thread_stop_event.set()
     Config.LOGGER.info("Stopping Jumbotron API")
-    server.stop()
     Config.LOGGER.info("Jumbotron API stopped successfully")
     Config.LOGGER.info("Exiting")
     exit(0)
+    
+if __name__ == '__main__':
+    try:
+        http_thread = threading.Thread(target=run_http_server)
+        http_thread.start()
+
+        asyncio.run(main())
+
+    except KeyboardInterrupt as e:
+        Config.LOGGER.info("Keyboard interrupt received")
+        thread_stop_event.set()
+        Config.LOGGER.info("Stopping Jumbotron API")
+        Config.LOGGER.info("Jumbotron API stopped successfully")
+        Config.LOGGER.info("Exiting")
+        exit(0)

@@ -53,7 +53,6 @@ export class Jumbotron {
             const response = await fetch(`http://${hostname}:${port}/jumbotron`);
             const json = await response.json();
             if (json) {
-                console.log(json);
                 this._state.set({
                     hostname,
                     port,
@@ -89,7 +88,7 @@ export class Jumbotron {
             this.socket.close();
         }
 
-        const wsUrl = `ws://${hostname}:${port}/jumbotron`;
+        const wsUrl = `ws://${hostname}:${port + 1}/jumbotron`;
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => {
