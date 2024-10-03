@@ -1,7 +1,6 @@
-// Jumbotron.ts
-import { io } from 'socket.io-client';
-import { get, writable } from 'svelte/store';
+import { writable, get } from 'svelte/store';
 import { Pixel } from './Pixel';
+
 export class Jumbotron {
     rows: number = 0;
     columns: number = 0;
@@ -12,9 +11,10 @@ export class Jumbotron {
     latency: number = 0;
     fps: number = 0;
 
-    private socket: any;
+    private socket: WebSocket | null = null;
     private updatesCounter: number = 0;
     private fpsTimer: number | undefined;
+    
     // Create a Svelte store for Jumbotron's state
     private _state = writable({
         rows: 0,
@@ -62,6 +62,7 @@ export class Jumbotron {
                     isInitialized: true,
                 } as Jumbotron);
                 await this.setupPixels();
+                this.initializeWebSocket(hostname, port);
             }
             return json !== undefined;
         } catch (e) {
@@ -78,7 +79,57 @@ export class Jumbotron {
             port: 5000,
             isInitialized: false,
         } as Jumbotron);
-        this.socket.disconnect();
+        if (this.socket) {
+            this.socket.close();
+        }
+    }
+
+    initializeWebSocket(hostname: string, port: number) {
+        if (this.socket) {
+            this.socket.close();
+        }
+
+        const wsUrl = `ws://${hostname}:${port}/jumbotron`;
+        this.socket = new WebSocket(wsUrl);
+
+        this.socket.onopen = () => {
+            console.log('WebSocket connected');
+        };
+
+        this.socket.onmessage = (event) => {
+            const response = JSON.parse(event.data);
+            this.handleWebSocketMessage(response);
+        };
+
+        this.socket.onclose = () => {
+            console.log('WebSocket disconnected');
+        };
+
+        this.socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+    }
+
+    handleWebSocketMessage(response: { data: Pixel[][], timestamp: number }) {
+        this.updatesCounter++;
+        // Fill in the row and column values for each pixel for easier access in other methods later
+        response.data.forEach((row, rowIndex) => row.forEach((pixel, columnIndex) => {
+            Object.assign(pixel, { row: rowIndex, column: columnIndex });
+        }));
+
+        const newLatency = Math.abs((Date.now() - (response.timestamp / 1000000)));
+        const newPixels = response.data;
+
+        const old = get(this._state);
+
+        // Check if the new data or latency is different from the old state before setting it
+        if (JSON.stringify(old.pixels) !== JSON.stringify(newPixels) || old.latency !== newLatency) {
+            this._state.set({
+                ...old,
+                pixels: newPixels,
+                latency: newLatency
+            } as Jumbotron);
+        }
     }
 
     async setupPixels() {
@@ -89,36 +140,7 @@ export class Jumbotron {
                 this.pixels[i][j] = new Pixel(0, 0, 0, 0, i, j);
             }
         }
-        this.updatePixels();
     }
-
-    async updatePixels() {
-        let data = get(this._state);
-        this.socket = io(`http://${data.hostname}:${data.port}/jumbotron`, { reconnectionAttempts: 5 });
-    
-        this.socket.on('array_update', (response: { data: Pixel[][], timestamp: number }) => {
-            this.updatesCounter++;
-            // Fill in the row and column values for each pixel for easier access in other methods later
-            response.data.forEach((row, rowIndex) => row.forEach((pixel, columnIndex) => {
-                Object.assign(pixel, { row: rowIndex, column: columnIndex });
-            }));
-    
-            let newLatency = Math.abs((Date.now() - (response.timestamp / 1000000)));
-            let newPixels = response.data;
-    
-            let old = get(this._state);
-    
-            // Check if the new data or latency is different from the old state before setting it
-            if (JSON.stringify(old.pixels) !== JSON.stringify(newPixels) || old.latency !== newLatency) {
-                this._state.set({
-                    ...old,
-                    pixels: newPixels,
-                    latency: newLatency
-                } as Jumbotron);
-            }
-        });
-    }
-    
 
     async updateBrightness(brightness: number) {
         let data = get(this._state);
@@ -205,8 +227,6 @@ export class Jumbotron {
         // Send the form data
         xhr.send(formData);
     }
-    
-    
 
     async getSavedItems() {
         let data = get(this._state);
@@ -237,13 +257,17 @@ export class Jumbotron {
         let data = get(this._state);
         await fetch(`http://${data.hostname}:${data.port}/jumbotron/delete_saved_matrix/${name}`, { method: 'DELETE' });
     }
+    
+    // Other methods unchanged...
 
     destroy() {
         if (this.fpsTimer) {
             window.clearInterval(this.fpsTimer);
         }
+        if (this.socket) {
+            this.socket.close();
+        }
     }
 }
 
 export const jumbotronInstance = Jumbotron.getInstance();
-
