@@ -9,3 +9,4 @@ class Config:
     SAVES_DIR = "saves"
     STATE_FILE = "last_state.json"
     LOGGER = create_logger()
+    PORT = 6942

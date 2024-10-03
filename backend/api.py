@@ -475,4 +475,4 @@ if __name__ == '__main__':
     Config.LOGGER.info("Last state loaded successfully")
     Config.LOGGER.info("Starting Jumbotron API")
     Config.LOGGER.info("Jumbotron API started successfully")
-    socketio.run(app, host='0.0.0.0', port=5000)
+    socketio.run(app, host='0.0.0.0', port=Config.PORT)
