@@ -48,6 +48,22 @@ def get_local_ip():
         return local_ip
     except:
         return "No IP"
+    
+def count_ssh_connections():
+    try:
+        # Run the shell command to count SSH connections
+        result = subprocess.run(
+            "ss -t | grep ':ssh' | wc -l",
+            shell=True,
+            capture_output=True,
+            text=True
+        )
+        # Extract and return the number of connections
+        ssh_count = int(result.stdout.strip())
+        return ssh_count
+    except Exception as e:
+        print(f"Error occurred: {e}")
+        return 0
 
 while True:
     # OLED 1: CPU and Memory
@@ -80,10 +96,11 @@ while True:
     disk_info = psutil.disk_usage('/')
     disk_used_gb = disk_info.used / (1024**3)
     disk_free_gb = disk_info.free / (1024**3)
-    draw2.text((0, 0), f"Used:{disk_used_gb:.1f}G/Free:{disk_free_gb:.1f}G", font=font, fill=255)
+    total_gb = disk_used_gb + disk_free_gb
+    draw2.text((0, 0), f"Disk Use: {disk_used_gb:.1f}G/{total_gb:.1f}G", font=font, fill=255)
 
-    swap_pct = int((psutil.swap_memory().used / psutil.swap_memory().total) * 100)
-    draw2.text((0, 18), f"Swap: {swap_pct}%", font=font, fill=255)
+    ssh_connections = count_ssh_connections()
+    draw2.text((0, 18), f"SSH Connections: {ssh_connections}", font=font, fill=255)
 
     wifi_status = get_wifi_status()
     ip_address = get_local_ip()
