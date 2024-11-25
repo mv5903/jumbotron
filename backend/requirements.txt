@@ -1,0 +1,10 @@
+Flask==2.3.2
+flask-cors==3.0.10
+eventlet==0.33.3
+Pillow==10.0.0
+opencv-python-headless==4.8.0.74
+websockets==11.0.3
+Werkzeug==2.3.7
+flask-sockets==0.2.1
+colorama==0.4.6
+rpi-ws281x==1.0.0
