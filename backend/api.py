@@ -476,7 +476,7 @@ try:
         Config.LOGGER.info("Last state loaded successfully")
         Config.LOGGER.info("Starting Jumbotron API")
         Config.LOGGER.info("Jumbotron API started successfully")
-        async with websockets.serve(jumbotron_updater, "localhost", Config.WS_PORT):
+        async with websockets.serve(jumbotron_updater, "0.0.0.0", Config.WS_PORT):
             Config.LOGGER.info(f"WebSocket server started on ws://localhost:{Config.WS_PORT}")
             await asyncio.Future() 
 
