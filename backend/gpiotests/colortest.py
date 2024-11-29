@@ -6,7 +6,7 @@ LED_COUNT = 64 * 48          # Number of LED pixels
 LED_PIN = 21              # GPIO pin connected to the pixels (must support PWM, GPIO 18/PWM0 is a good choice)
 LED_FREQ_HZ = 800000      # LED signal frequency in hertz (usually 800khz)
 LED_DMA = 10              # DMA channel to use for generating signal (10 is a good choice)
-LED_BRIGHTNESS = 10      # Brightness of LED (0-255, 255 is maximum brightness)
+LED_BRIGHTNESS = 1      # Brightness of LED (0-255, 255 is maximum brightness)
 LED_INVERT = False        # True to invert the signal (when using NPN transistor level shift)
 LED_CHANNEL = 0           # Channel 0 or 1
 

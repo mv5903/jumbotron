@@ -10,3 +10,4 @@ backend/saves/*
 **/build/** 
 **/dist/**
 **/venv/**
+**/node_modules/**
