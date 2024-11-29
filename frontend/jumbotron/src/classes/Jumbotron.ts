@@ -1,4 +1,4 @@
-import { writable, get } from 'svelte/store';
+import { get, writable } from 'svelte/store';
 import { Pixel } from './Pixel';
 
 export class Jumbotron {
@@ -254,7 +254,7 @@ export class Jumbotron {
 
     async deleteSavedItem(name: string) {
         let data = get(this._state);
-        await fetch(`http://${data.hostname}:${data.port}/jumbotron/delete_saved_matrix/${name}`, { method: 'DELETE' });
+        await fetch(`http://${data.hostname}:${data.port}/jumbotron/delete_saved_matrix/${name}`, { method: 'POST' });
     }
     
     // Other methods unchanged...

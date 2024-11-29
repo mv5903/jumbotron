@@ -1,9 +1,8 @@
 <script lang="ts">
-    import { onMount } from 'svelte';
-    import { jumbotronInstance, Jumbotron } from '../classes/Jumbotron';
-    import FaTrash from 'svelte-icons/fa/FaTrash.svelte';
     import FaImage from 'svelte-icons/fa/FaImage.svelte';
+    import FaTrash from 'svelte-icons/fa/FaTrash.svelte';
     import FaVideo from 'svelte-icons/fa/FaVideo.svelte';
+    import { Jumbotron, jumbotronInstance } from '../classes/Jumbotron';
 
     let jumbotronState: Jumbotron;
 
@@ -16,7 +15,6 @@
     let currentPreviewURL: string = "";
 
     async function showPreviewHandler(e: MouseEvent, name: string) {
-        console.log(e.currentTarget);
         currentName = name;
         currentPreviewURL = await jumbotronInstance.getSavedItemPreview(name);
     }
