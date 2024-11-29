@@ -287,8 +287,8 @@ try:
             Config.LOGGER.error(f"Error playing saved matrix: {str(e)}")
             return json_response({"success": False, "error": str(e)}, status=500)
 
-    @route('/jumbotron/delete_saved_matrix/<string:filename>', method='DELETE')
-    def delete_saved_matrix(filename):
+    @route('/jumbotron/delete_saved_matrix/<string:filename>', method='POST')
+    def delete_saved_matrix(post_data, filename):
         Config.LOGGER.info("Deleting saved matrix: %s", filename)
         filepath = os.path.join(Config.SAVES_DIR, filename)
 
