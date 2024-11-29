@@ -113,10 +113,10 @@
 {#if !jumbotronState.isInitialized}
 <p>Loading...</p>
 {:else if jumbotronState.isInitialized && Array.isArray(jumbotronState.pixels)}
-    <div class="flex justify-between gap-16">
+    <div class="flex justify-between gap-16 w-full">
         <div class="card m-4 left-0 bg-base-300" >
             <h2 class="text-2xl">Edit Jumbotron</h2>
-            {#if !isMobileDevice()}
+            {#if !isMobile}
                 <h2>Edit Directly</h2>
                 <div class="join join-horizontal mt-4 text-sm shadow-md">
                     <button class={`btn tooltip join-item ${editMode == EditMode.PIXEL && 'btn-primary'}`} data-tip="Pencil" on:click={() => editMode = EditMode.PIXEL} style="borderRadius: 'revert'"><FaPencilAlt /></button>
@@ -191,24 +191,26 @@
         </div>
         {/if}
     </div>
-    <div class="absolute top-24 card bg-base-300">
-        <div class="flex gap-2">
-            <p>Debug Info</p>
-            <input type="checkbox" class="toggle" bind:checked={showDebug} />
-        </div>
-        {#if showDebug}
-            <div>
-                <div class="flex gap-2">
-                    <p>Latency: </p>
-                    <p>{jumbotronState.latency.toFixed(0)}ms</p>
-                </div>
-                <div class="flex gap-2">
-                    <p>FPS: </p>
-                    <p>{jumbotronState.fps}</p>
-                </div>
+    {#if !isMobile}
+        <div class="absolute bottom-4 card bg-base-300 text-center">
+            <div class="flex gap-2 mb-1">
+                <p>Debug Info</p>
+                <input type="checkbox" class="toggle" bind:checked={showDebug} />
             </div>
-        {/if}
-    </div>
+            {#if showDebug}
+                <div>
+                    <div class="flex gap-2">
+                        <p>Latency: </p>
+                        <p>{jumbotronState.latency.toFixed(0)}ms</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <p>FPS: </p>
+                        <p>{jumbotronState.fps}</p>
+                    </div>
+                </div>
+            {/if}
+        </div>
+    {/if}
 {/if}
 
 <style>
