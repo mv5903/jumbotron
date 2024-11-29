@@ -178,7 +178,7 @@ try:
         return json_response({"success": True})
 
     @route('/jumbotron/upload/<int:brightness>', method='POST')
-    def upload_image(post_data, form, brightness):
+    def upload_image(post_data=None, form=None, brightness=1):
         global video_is_playing
         Config.LOGGER.info("Uploading image")
         if 'file' not in form:

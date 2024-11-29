@@ -117,7 +117,7 @@ class CustomHTTPRequestHandler(http.server.SimpleHTTPRequestHandler):
                     }
                 )
                 try:
-                    print("Form: ", form)
+                    #print("Form: ", form)
                     print("Handler: ", handler)
                     response = handler(form=form, **params)
                 except Exception as e:
